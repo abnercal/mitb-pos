@@ -20,6 +20,22 @@ export const routes: Routes = [
         path: 'config',
         loadComponent: () => import('./config/config.component'),
       },
+      {
+        path: 'categorias',
+        loadComponent: () => import('./categorias/list/categorias-list.component'),
+      },
+      {
+        path: 'marcas',
+        loadComponent: () => import('./marcas/list/marcas-list.component'),
+      },
+      {
+        path: 'unidades',
+        loadComponent: () => import('./unidades/list/unidades-list.component'),
+      },
+      {
+        path: 'presentaciones',
+        loadComponent: () => import('./presentaciones/list/presentaciones-list.component'),
+      },
     ],
   },
   {

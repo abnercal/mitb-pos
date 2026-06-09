@@ -159,6 +159,8 @@ export default class MainLayoutComponent {
     { icon: 'inventory_2', label: 'Productos', route: '/productos' },
     { icon: 'category', label: 'Categorías', route: '/categorias' },
     { icon: 'branding', label: 'Marcas', route: '/marcas' },
+    { icon: 'straighten', label: 'Unidades', route: '/unidades' },
+    { icon: 'inventory', label: 'Presentaciones', route: '/presentaciones' },
     { icon: 'shopping_cart', label: 'Compras', route: '/compras' },
     { icon: 'point_of_sale', label: 'Ventas', route: '/ventas' },
     { icon: 'people_outline', label: 'Clientes', route: '/clientes' },

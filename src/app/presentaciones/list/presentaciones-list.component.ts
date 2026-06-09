@@ -1,0 +1,102 @@
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { MatTableModule } from '@angular/material/table';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatCardModule } from '@angular/material/card';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { PresentacionService } from '../../core/services/presentacion.service';
+import { Presentacion } from '../../core/interfaces/presentacion.interface';
+import { PresentacionFormComponent } from '../form/presentacion-form.component';
+
+@Component({
+  selector: 'app-presentaciones-list',
+  standalone: true,
+  imports: [
+    CommonModule, MatTableModule, MatButtonModule, MatIconModule,
+    MatCardModule, MatChipsModule, MatDialogModule, MatSnackBarModule,
+  ],
+  template: `
+    <div class="page-header">
+      <h1>Presentaciones</h1>
+      <button mat-raised-button color="primary" (click)="openCreate()">
+        <mat-icon>add</mat-icon> Nueva presentación
+      </button>
+    </div>
+
+    <mat-card>
+      <mat-card-content>
+        <table mat-table [dataSource]="data()" class="full-table">
+          <ng-container matColumnDef="nombre">
+            <th mat-header-cell *matHeaderCellDef>Nombre</th>
+            <td mat-cell *matCellDef="let item">{{ item.nombre }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="estado">
+            <th mat-header-cell *matHeaderCellDef>Estado</th>
+            <td mat-cell *matCellDef="let item">
+              <mat-chip [color]="item.estado ? 'primary' : 'warn'" highlighted>
+                {{ item.estado ? 'Activo' : 'Inactivo' }}
+              </mat-chip>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="acciones">
+            <th mat-header-cell *matHeaderCellDef>Acciones</th>
+            <td mat-cell *matCellDef="let item">
+              <button mat-icon-button color="primary" (click)="openEdit(item)" matTooltip="Editar"><mat-icon>edit</mat-icon></button>
+              <button mat-icon-button color="warn" (click)="delete(item)" matTooltip="Eliminar"><mat-icon>delete</mat-icon></button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="columns"></tr>
+          <tr mat-row *matRowDef="let row; columns: columns"></tr>
+          <tr class="mat-row" *matNoDataRow>
+            <td class="mat-cell" [attr.colspan]="columns.length">
+              <div class="empty-state"><mat-icon>inventory</mat-icon><p>No hay presentaciones registradas</p></div>
+            </td>
+          </tr>
+        </table>
+      </mat-card-content>
+    </mat-card>
+  `,
+  styles: [`
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .page-header h1 { margin: 0; font-size: 24px; font-weight: 500; }
+    .full-table { width: 100%; }
+    .empty-state { display: flex; flex-direction: column; align-items: center; padding: 40px; color: #999; }
+    .empty-state mat-icon { font-size: 48px; width: 48px; height: 48px; margin-bottom: 12px; }
+  `],
+})
+export default class PresentacionesListComponent implements OnInit {
+  private readonly service = inject(PresentacionService);
+  private readonly dialog = inject(MatDialog);
+  private readonly snackBar = inject(MatSnackBar);
+  readonly data = signal<Presentacion[]>([]);
+  readonly columns = ['nombre', 'estado', 'acciones'];
+
+  ngOnInit(): void { this.load(); }
+  private load(): void {
+    this.service.getAll().subscribe({
+      next: (res) => this.data.set(res),
+      error: () => this.snackBar.open('Error al cargar presentaciones', 'Cerrar', { duration: 3000 }),
+    });
+  }
+  openCreate(): void {
+    const ref = this.dialog.open(PresentacionFormComponent, { width: '450px' });
+    ref.afterClosed().subscribe(r => { if (r) this.load(); });
+  }
+  openEdit(item: Presentacion): void {
+    const ref = this.dialog.open(PresentacionFormComponent, { width: '450px', data: item });
+    ref.afterClosed().subscribe(r => { if (r) this.load(); });
+  }
+  delete(item: Presentacion): void {
+    if (!confirm(`¿Eliminar la presentación "${item.nombre}"?`)) return;
+    this.service.delete(item._id!).subscribe({
+      next: () => { this.snackBar.open('Presentación eliminada', 'Cerrar', { duration: 2000 }); this.load(); },
+      error: () => this.snackBar.open('Error al eliminar', 'Cerrar', { duration: 3000 }),
+    });
+  }
+}
