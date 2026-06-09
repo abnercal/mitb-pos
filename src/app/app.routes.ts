@@ -36,6 +36,14 @@ export const routes: Routes = [
         path: 'presentaciones',
         loadComponent: () => import('./presentaciones/list/presentaciones-list.component'),
       },
+      {
+        path: 'proveedores',
+        loadComponent: () => import('./proveedores/list/proveedores-list.component'),
+      },
+      {
+        path: 'clientes',
+        loadComponent: () => import('./clientes/list/clientes-list.component'),
+      },
     ],
   },
   {
