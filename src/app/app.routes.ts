@@ -48,6 +48,14 @@ export const routes: Routes = [
         path: 'productos',
         loadComponent: () => import('./productos/list/productos-list.component'),
       },
+      {
+        path: 'compras',
+        loadComponent: () => import('./compras/list/compras-list.component'),
+      },
+      {
+        path: 'ventas',
+        loadComponent: () => import('./ventas/list/ventas-list.component'),
+      },
     ],
   },
   {
