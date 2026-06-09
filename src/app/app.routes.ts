@@ -44,6 +44,10 @@ export const routes: Routes = [
         path: 'clientes',
         loadComponent: () => import('./clientes/list/clientes-list.component'),
       },
+      {
+        path: 'productos',
+        loadComponent: () => import('./productos/list/productos-list.component'),
+      },
     ],
   },
   {
