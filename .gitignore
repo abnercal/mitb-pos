@@ -29,6 +29,10 @@ yarn-error.log
 !.vscode/mcp.json
 .history/*
 
+# AI tooling artifacts
+.atl/
+/openspec/
+
 # Miscellaneous
 /.angular/cache
 .sass-cache/
