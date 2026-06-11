@@ -26,6 +26,7 @@ import { SucursalesFormComponent } from '../form/sucursales-form.component';
     </div>
     <mat-card>
       <mat-card-content>
+        <div class="table-responsive">
         <table mat-table [dataSource]="data()" class="full-table">
           <ng-container matColumnDef="nombre">
             <th mat-header-cell *matHeaderCellDef>Nombre</th>
@@ -61,6 +62,7 @@ import { SucursalesFormComponent } from '../form/sucursales-form.component';
             <td [attr.colspan]="columns.length"><div class="empty-state"><mat-icon>store</mat-icon><p>No hay sucursales</p></div></td>
           </tr>
         </table>
+        </div>
 
         <mat-paginator [length]="totalItems()" [pageSize]="pageSize()"
           [pageSizeOptions]="[5, 10, 25, 50]" (page)="onPage($event)">

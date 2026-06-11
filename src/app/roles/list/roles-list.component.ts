@@ -23,6 +23,7 @@ import { RolesFormComponent } from '../form/roles-form.component';
     </div>
     <mat-card>
       <mat-card-content>
+        <div class="table-responsive">
         <table mat-table [dataSource]="data()" class="full-table">
           <ng-container matColumnDef="nombrerol">
             <th mat-header-cell *matHeaderCellDef>Rol</th>
@@ -48,6 +49,7 @@ import { RolesFormComponent } from '../form/roles-form.component';
             <td [attr.colspan]="columns.length"><div class="empty-state"><mat-icon>admin_panel_settings</mat-icon><p>No hay roles</p></div></td>
           </tr>
         </table>
+        </div>
 
         <mat-paginator [length]="totalItems()" [pageSize]="pageSize()"
           [pageSizeOptions]="[5, 10, 25, 50]" (page)="onPage($event)">

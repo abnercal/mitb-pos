@@ -53,3 +53,49 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #999;
 }
+
+/* ─── Responsive utilities ────────────────────────────────────────────── */
+
+/** Wrap de tabla con scroll horizontal en mobile */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/** Fila de formulario responsive */
+.form-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.form-row > * {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+/** Ajustes generales mobile */
+@media (max-width: 899px) {
+  .content {
+    padding: 12px !important;
+  }
+}
+
+@media (max-width: 599px) {
+  .content {
+    padding: 8px !important;
+  }
+
+  .page-title {
+    font-size: 20px !important;
+  }
+
+  .mat-mdc-dialog-surface {
+    max-width: 100vw !important;
+    border-radius: 0 !important;
+  }
+
+  .mat-mdc-dialog-container {
+    max-width: 100vw !important;
+  }
+}

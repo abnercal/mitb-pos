@@ -15,6 +15,7 @@ import { ClienteService } from '../core/services/cliente.service';
 import { VentaService } from '../core/services/venta.service';
 import { AuthService } from '../core/services/auth.service';
 import { PrecioService } from '../core/services/precio.service';
+import { AppEventsService } from '../core/services/app-events.service';
 import { Producto } from '../core/interfaces/producto.interface';
 import { Cliente } from '../core/interfaces/cliente.interface';
 import { Venta } from '../core/interfaces/venta.interface';
@@ -272,6 +273,7 @@ export default class PosComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
+  private readonly appEvents = inject(AppEventsService);
 
   readonly searchTerm = signal('');
   readonly allProducts = signal<Producto[]>([]);
@@ -608,6 +610,7 @@ export default class PosComponent implements OnInit {
           this.snackBar.open('Venta registrada', 'Cerrar', { duration: 3000 });
           this.cartItems.set([]);
           this.searchTerm.set('');
+          this.appEvents.notifySaleCompleted();
           this.dialog.open(TicketVentaComponent, {
             width: '520px',
             data: venta,

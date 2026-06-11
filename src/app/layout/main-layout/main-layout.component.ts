@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatSidenavModule } from '@angular/material/sidenav';
@@ -8,6 +8,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
+import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../core/services/auth.service';
 import { ModuloService } from '../../core/services/modulo.service';
 
@@ -39,7 +41,8 @@ interface NavItem {
       <mat-sidenav
         #sidenav
         [opened]="sidebarOpen()"
-        [mode]="'side'"
+        [mode]="isMobile() ? 'over' : 'side'"
+        (closed)="sidebarOpen.set(false)"
         class="sidenav"
       >
         <div class="sidenav-header">
@@ -54,6 +57,7 @@ interface NavItem {
             [routerLink]="item.route"
             routerLinkActive="active-link"
             [routerLinkActiveOptions]="{ exact: item.route === '/' }"
+            (click)="onNavClick()"
           >
             <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
             <span matListItemTitle>{{ item.label }}</span>
@@ -160,8 +164,11 @@ interface NavItem {
 export default class MainLayoutComponent {
   private readonly auth = inject(AuthService);
   private readonly modulos = inject(ModuloService);
+  private readonly breakpointObserver = inject(BreakpointObserver);
+  private readonly destroyRef = inject(DestroyRef);
   readonly sidebarOpen = signal(true);
   readonly session = this.auth.getSession();
+  readonly isMobile = signal(false);
 
   private readonly navItems: NavItem[] = [
     { icon: 'dashboard', label: 'Dashboard', route: '/' },
@@ -183,6 +190,26 @@ export default class MainLayoutComponent {
     { icon: 'settings', label: 'Configuración', route: '/config', feature: 'config' },
     { icon: 'tune', label: 'Módulos (Admin)', route: '/modulos', feature: 'modulos', superadminOnly: true },
   ];
+
+  constructor() {
+    this.breakpointObserver
+      .observe([Breakpoints.Handset, Breakpoints.TabletPortrait])
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(result => {
+        this.isMobile.set(result.matches);
+        if (result.matches) {
+          this.sidebarOpen.set(false);
+        } else {
+          this.sidebarOpen.set(true);
+        }
+      });
+  }
+
+  onNavClick(): void {
+    if (this.isMobile()) {
+      this.sidebarOpen.set(false);
+    }
+  }
 
   get filteredNavItems(): NavItem[] {
     return this.navItems.filter((item) => {

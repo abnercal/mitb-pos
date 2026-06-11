@@ -29,6 +29,7 @@ import { UnidadFormComponent } from '../form/unidad-form.component';
 
     <mat-card>
       <mat-card-content>
+        <div class="table-responsive">
         <table mat-table [dataSource]="data()" class="full-table">
           <ng-container matColumnDef="nombre">
             <th mat-header-cell *matHeaderCellDef>Nombre</th>
@@ -65,6 +66,7 @@ import { UnidadFormComponent } from '../form/unidad-form.component';
             </td>
           </tr>
         </table>
+        </div>
 
         <mat-paginator [length]="totalItems()" [pageSize]="pageSize()"
           [pageSizeOptions]="[5, 10, 25, 50]" (page)="onPage($event)">

@@ -42,6 +42,7 @@ import { DetalleDialog, DetalleItem } from '../../shared/components/detalle-dial
         </mat-form-field>
       </mat-card-header>
       <mat-card-content>
+        <div class="table-responsive">
         <table mat-table [dataSource]="data()" class="full-table">
           <ng-container matColumnDef="nombre">
             <th mat-header-cell *matHeaderCellDef>Referencia</th>
@@ -97,6 +98,7 @@ import { DetalleDialog, DetalleItem } from '../../shared/components/detalle-dial
             </td>
           </tr>
         </table>
+        </div>
         <mat-paginator [length]="totalItems()" [pageSize]="pageSize()"
           [pageSizeOptions]="[5, 10, 25, 50]" (page)="onPage($event)">
         </mat-paginator>

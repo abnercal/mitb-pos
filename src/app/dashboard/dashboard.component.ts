@@ -1,5 +1,6 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, DestroyRef, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
@@ -9,6 +10,7 @@ import { VentaService } from '../core/services/venta.service';
 import { ProductoService } from '../core/services/producto.service';
 import { ProveedorService } from '../core/services/proveedor.service';
 import { ClienteService } from '../core/services/cliente.service';
+import { AppEventsService } from '../core/services/app-events.service';
 import { Venta } from '../core/interfaces/venta.interface';
 
 @Component({
@@ -107,6 +109,8 @@ export default class DashboardComponent implements OnInit {
   private readonly productoService = inject(ProductoService);
   private readonly proveedorService = inject(ProveedorService);
   private readonly clienteService = inject(ClienteService);
+  private readonly appEvents = inject(AppEventsService);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly totalProductos = signal(0);
   readonly totalClientes = signal(0);
@@ -115,6 +119,15 @@ export default class DashboardComponent implements OnInit {
   readonly recentSales = signal<Venta[]>([]);
 
   ngOnInit(): void {
+    this.loadData();
+
+    // Escuchar eventos de venta completada para refrescar
+    this.appEvents.saleCompleted$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      this.loadData();
+    });
+  }
+
+  private loadData(): void {
     this.productoService.getAllList().subscribe(r => this.totalProductos.set(r.length));
     this.clienteService.getAllList().subscribe(r => this.totalClientes.set(r.length));
     this.proveedorService.getAllList().subscribe(r => this.totalProveedores.set(r.length));

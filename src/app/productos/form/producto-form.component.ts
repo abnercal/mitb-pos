@@ -209,12 +209,12 @@ import { TipoClie } from '../../core/interfaces/cliente.interface';
   `,
   styles: [`
     .full-width { width: 100%; margin-bottom: 16px; }
-    .form-row { display: flex; gap: 16px; margin-bottom: 16px; }
+    .form-row { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
     .flex-1 { flex: 1; }
     .toggle-row { margin: 16px 0; }
     .section-title { display: flex; align-items: center; gap: 12px; margin: 20px 0 12px; font-size: 16px; font-weight: 500; }
     .pres-grid { display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px; }
-    .pres-row { display: flex; gap: 8px; align-items: flex-start; }
+    .pres-row { display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; }
     .pres-select { flex: 2; }
     .pres-qty { flex: 1; }
     .pres-price { flex: 1; }

@@ -131,9 +131,9 @@ interface DetalleCompra {
     </form>
   `,
   styles: [`
-    .form-row { display: flex; gap: 16px; margin-bottom: 16px; }
+    .form-row { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
     .flex-1 { flex: 1; } .flex-2 { flex: 2; }
-    .detalle-row { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; }
+    .detalle-row { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
     .full-table { width: 100%; margin: 8px 0; }
     .total-row { text-align: right; font-size: 18px; margin-top: 16px; padding: 12px; background: #f5f5f5; border-radius: 4px; }
     .empty-detalle { text-align: center; padding: 20px; color: #999; }
