@@ -8,7 +8,7 @@ import { environment } from '../../../environments/environment';
 @Injectable({ providedIn: 'root' })
 export class PrecioService {
   private readonly http = inject(HttpClient);
-  private readonly apiUrl = `${environment.apiUrl}/api/precios`;
+  private readonly apiUrl = `${environment.apiUrl}/precios`;
 
   getAll(filtros?: { idprodPresenta?: number }): Observable<Precio[]> {
     let params: any = {};

@@ -2,7 +2,7 @@ import { Component, OnInit, DestroyRef, inject, signal, computed } from '@angula
 import { CommonModule } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators, FormArray } from '@angular/forms';
-import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { MatDialog, MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
@@ -118,6 +118,10 @@ import { TipoClie } from '../../core/interfaces/cliente.interface';
             <mat-form-field appearance="fill" class="pres-barcode">
               <mat-label>Código barras</mat-label>
               <input matInput formControlName="codigo_barras" placeholder="Opcional">
+              <button matSuffix type="button" mat-icon-button (click)="scanBarcode(i)"
+                      matTooltip="Escanear código de barras" tabindex="-1">
+                <mat-icon>qr_code_scanner</mat-icon>
+              </button>
             </mat-form-field>
 
             <button type="button" mat-icon-button color="warn" 
@@ -255,6 +259,7 @@ export default class ProductoFormComponent implements OnInit {
   private readonly unidadService = inject(UnidadService);
   private readonly precioService = inject(PrecioService);
   private readonly tipoClienteService = inject(TipoClienteService);
+  private readonly dialog = inject(MatDialog);
   private readonly dialogRef = inject(MatDialogRef<ProductoFormComponent>);
   private readonly snackBar = inject(MatSnackBar);
   protected readonly data: Producto | null = inject(MAT_DIALOG_DATA);
@@ -484,6 +489,23 @@ export default class ProductoFormComponent implements OnInit {
         this.dialogRef.close(true);
       },
       error: () => this.snackBar.open('Error al guardar', 'Cerrar', { duration: 3000 }),
+    });
+  }
+
+  async scanBarcode(index: number): Promise<void> {
+    const { BarcodeScannerComponent } = await import('../../pos/barcode-scanner.component');
+    const ref = this.dialog.open(BarcodeScannerComponent, {
+      width: '500px',
+      disableClose: true,
+      data: {
+        onDetect: (_code: string) => Promise.resolve(true),
+      },
+    });
+    ref.afterClosed().subscribe((code: string | null) => {
+      if (code) {
+        const group = this.presentacionesArray.controls[index];
+        group.get('codigo_barras')?.setValue(code);
+      }
     });
   }
 }
