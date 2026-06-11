@@ -58,6 +58,7 @@ type FiltroEstado = 'todos' | 'bajo' | 'sin_stock' | 'normal';
         <p>No se encontraron productos con esos filtros</p>
       </div>
 
+      <div class="table-responsive">
       <table mat-table [dataSource]="filteredItems()" class="inv-table" *ngIf="filteredItems().length">
         <!-- Producto -->
         <ng-container matColumnDef="producto">
@@ -114,6 +115,7 @@ type FiltroEstado = 'todos' | 'bajo' | 'sin_stock' | 'normal';
             [class.row-bajo]="row.estado === 'bajo'"
             [class.row-sin-stock]="row.estado === 'sin_stock'"></tr>
       </table>
+      </div>
     </div>
   `,
   styles: [`

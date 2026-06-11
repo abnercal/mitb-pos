@@ -77,7 +77,7 @@ interface DetalleCompra {
             <mat-label>Costo</mat-label>
             <input matInput type="number" step="0.01" [(ngModel)]="newCosto" [ngModelOptions]="{standalone: true}" min="0">
           </mat-form-field>
-          <button mat-icon-button color="primary" (click)="addDetalle()" [disabled]="!selectedPres || !newCantidad">
+          <button mat-icon-button color="primary" type="button" (click)="addDetalle()" [disabled]="!selectedPres || !newCantidad">
             <mat-icon>add_circle</mat-icon>
           </button>
         </div>

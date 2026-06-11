@@ -77,7 +77,7 @@ interface DetalleVenta {
             <mat-label>Precio Q</mat-label>
             <input matInput type="number" step="0.01" [(ngModel)]="newPrecio" [ngModelOptions]="{standalone: true}" min="0">
           </mat-form-field>
-          <button mat-icon-button color="primary" (click)="addDetalle()" [disabled]="!selectedPres || !newCantidad">
+          <button mat-icon-button color="primary" type="button" (click)="addDetalle()" [disabled]="!selectedPres || !newCantidad">
             <mat-icon>add_circle</mat-icon>
           </button>
         </div>
@@ -153,7 +153,12 @@ export class VentaFormComponent implements OnInit {
 
   readonly nextCode = signal<string | null>(null);
 
-  selectedPres: PresOption | null = null;
+  private _selectedPres: PresOption | null = null;
+  get selectedPres(): PresOption | null { return this._selectedPres; }
+  set selectedPres(val: PresOption | null) {
+    this._selectedPres = val;
+    if (val) this.newPrecio = val.precioVenta;
+  }
   newCantidad = 1;
   newPrecio = 0;
 

@@ -1,5 +1,6 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, DestroyRef, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators, FormArray } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -149,21 +150,25 @@ import { TipoClie } from '../../core/interfaces/cliente.interface';
           </div>
           <div class="precios-row" *ngFor="let p of precios(); let i = index">
             <mat-form-field appearance="fill">
+              <mat-label>Presentación</mat-label>
               <mat-select [(ngModel)]="p.idprodPresenta" (ngModelChange)="onPrecioChange(i)" [ngModelOptions]="{standalone: true}">
-                <mat-option *ngFor="let pp of presentacionesDelProducto()" [value]="pp.idprodPresenta">
+                <mat-option *ngFor="let pp of presOptions()" [value]="pp.idprodPresenta">
                   {{ pp.Presentacion?.nombre }}
                 </mat-option>
               </mat-select>
             </mat-form-field>
             <mat-form-field appearance="fill">
+              <mat-label>Tipo cliente</mat-label>
               <mat-select [(ngModel)]="p.idtipoCli" (ngModelChange)="onPrecioChange(i)" [ngModelOptions]="{standalone: true}">
                 <mat-option *ngFor="let tc of tiposCliente" [value]="tc.idtipoCli">{{ tc.nombre }}</mat-option>
               </mat-select>
             </mat-form-field>
             <mat-form-field appearance="fill">
+              <mat-label>Precio Q</mat-label>
               <input matInput type="number" step="0.01" [(ngModel)]="p.precio" (ngModelChange)="onPrecioChange(i)" [ngModelOptions]="{standalone: true}">
             </mat-form-field>
             <mat-form-field appearance="fill">
+              <mat-label>Tipo</mat-label>
               <mat-select [(ngModel)]="p.tipoprecio" (ngModelChange)="onPrecioChange(i)" [ngModelOptions]="{standalone: true}">
                 <mat-option value="regular">Regular</mat-option>
                 <mat-option value="mayorista">Mayorista</mat-option>
@@ -172,12 +177,14 @@ import { TipoClie } from '../../core/interfaces/cliente.interface';
             </mat-form-field>
             <div class="vigencia-fields">
               <mat-form-field appearance="fill">
-                <input matInput [matDatepicker]="dpDesde" placeholder="Desde" [(ngModel)]="p.fechaefecto" (ngModelChange)="onPrecioChange(i)" [ngModelOptions]="{standalone: true}">
+                <mat-label>Desde</mat-label>
+                <input matInput [matDatepicker]="dpDesde" [(ngModel)]="p.fechaefecto" (ngModelChange)="onPrecioChange(i)" [ngModelOptions]="{standalone: true}">
                 <mat-datepicker-toggle matSuffix [for]="dpDesde"></mat-datepicker-toggle>
                 <mat-datepicker #dpDesde></mat-datepicker>
               </mat-form-field>
               <mat-form-field appearance="fill">
-                <input matInput [matDatepicker]="dpHasta" placeholder="Hasta" [(ngModel)]="p.fechafin" (ngModelChange)="onPrecioChange(i)" [ngModelOptions]="{standalone: true}">
+                <mat-label>Hasta</mat-label>
+                <input matInput [matDatepicker]="dpHasta" [(ngModel)]="p.fechafin" (ngModelChange)="onPrecioChange(i)" [ngModelOptions]="{standalone: true}">
                 <mat-datepicker-toggle matSuffix [for]="dpHasta"></mat-datepicker-toggle>
                 <mat-datepicker #dpHasta></mat-datepicker>
               </mat-form-field>
@@ -221,19 +228,20 @@ import { TipoClie } from '../../core/interfaces/cliente.interface';
     .pres-barcode { flex: 1.5; }
     .pres-empty { text-align: center; padding: 20px; background: #f5f5f5; border-radius: 8px; color: #999; font-size: 14px; }
     .precios-table { display: flex; flex-direction: column; gap: 8px; margin: 8px 0; }
-    .precios-header { display: flex; gap: 8px; font-size: 12px; font-weight: 600; color: #666; text-transform: uppercase; padding: 0 4px; }
-    .precios-header span:nth-child(1) { flex: 2; }
-    .precios-header span:nth-child(2) { flex: 2; }
-    .precios-header span:nth-child(3) { flex: 1; }
-    .precios-header span:nth-child(4) { flex: 1; }
-    .precios-header span:nth-child(5) { flex: 2; }
+    .precios-header { display: flex; gap: 8px; font-size: 12px; font-weight: 600; color: #666; text-transform: uppercase; padding: 0 4px; flex-wrap: wrap; }
+    .precios-header span { min-width: 100px; }
+    .precios-header span:nth-child(1) { flex: 2; min-width: 130px; }
+    .precios-header span:nth-child(2) { flex: 2; min-width: 140px; }
+    .precios-header span:nth-child(3) { flex: 1; min-width: 100px; }
+    .precios-header span:nth-child(4) { flex: 1; min-width: 110px; }
+    .precios-header span:nth-child(5) { flex: 2; min-width: 200px; }
     .precios-header span:nth-child(6) { width: 40px; }
-    .precios-row { display: flex; gap: 8px; align-items: flex-start; }
-    .precios-row mat-form-field:nth-child(1) { flex: 2; }
-    .precios-row mat-form-field:nth-child(2) { flex: 2; }
-    .precios-row mat-form-field:nth-child(3) { flex: 1; }
-    .precios-row mat-form-field:nth-child(4) { flex: 1; }
-    .vigencia-fields { flex: 2; display: flex; gap: 4px; }
+    .precios-row { display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; }
+    .precios-row mat-form-field:nth-child(1) { flex: 2; min-width: 130px; }
+    .precios-row mat-form-field:nth-child(2) { flex: 2; min-width: 140px; }
+    .precios-row mat-form-field:nth-child(3) { flex: 1; min-width: 100px; }
+    .precios-row mat-form-field:nth-child(4) { flex: 1; min-width: 110px; }
+    .vigencia-fields { flex: 2; display: flex; gap: 4px; min-width: 200px; }
     .vigencia-fields mat-form-field { flex: 1; }
     .empty-precios { text-align: center; padding: 16px; background: #fafafa; border-radius: 8px; color: #888; font-size: 13px; border: 1px dashed #ddd; margin: 8px 0; }
   `],
@@ -250,6 +258,7 @@ export default class ProductoFormComponent implements OnInit {
   private readonly dialogRef = inject(MatDialogRef<ProductoFormComponent>);
   private readonly snackBar = inject(MatSnackBar);
   protected readonly data: Producto | null = inject(MAT_DIALOG_DATA);
+  private readonly destroyRef = inject(DestroyRef);
 
   categorias: Categoria[] = [];
   marcas: Marca[] = [];
@@ -261,6 +270,25 @@ export default class ProductoFormComponent implements OnInit {
   /** Presentaciones disponibles (del producto actual o recién creado) */
   presentacionesProducto: { idprodPresenta?: number; Presentacion?: { nombre: string } }[] = [];
   private preciosRemovidos: number[] = [];
+  private readonly formVersion = signal(0);
+
+  /** Presentaciones disponibles para el select de precios (señal computada, evita loops) */
+  readonly presOptions = computed(() => {
+    this.formVersion(); // dependencia para recalcular
+    if (this.presentacionesProducto.length) return this.presentacionesProducto;
+
+    return this.presentacionesArray.controls
+      .map((c, i) => {
+        const idpres = c.get('idpresentacion')?.value;
+        if (!idpres) return null;
+        const pres = this.todasPresentaciones.find(p => p._id === idpres);
+        return {
+          idprodPresenta: -(i + 1),
+          Presentacion: pres ? { nombre: pres.nombre } : { nombre: `Presentación ${i + 1}` },
+        };
+      })
+      .filter((p): p is { idprodPresenta: number; Presentacion: { nombre: string } } => p != null);
+  });
 
   readonly form = this.fb.group({
     nombre: [this.data?.nombre ?? '', Validators.required],
@@ -315,6 +343,11 @@ export default class ProductoFormComponent implements OnInit {
         error: () => this.precios.set([]),
       });
     }
+
+    // Recalcular presOptions cada vez que cambien las presentaciones del form
+    this.presentacionesArray.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.formVersion.update(v => v + 1));
   }
 
   /** Devuelve las presentaciones que NO están ya seleccionadas en otra fila */
@@ -333,18 +366,8 @@ export default class ProductoFormComponent implements OnInit {
     this.presentacionesArray.removeAt(index);
   }
 
-  /** Devuelve las presentaciones disponibles para asignar precios */
-  presentacionesDelProducto(): { idprodPresenta?: number; Presentacion?: { nombre: string } }[] {
-    // Priorizar las cargadas del producto (para edición)
-    if (this.presentacionesProducto.length) return this.presentacionesProducto;
-
-    // Si estamos en creación, tomar las del formulario (sin id real aún)
-    // En ese caso se asignan después de guardar el producto
-    return [];
-  }
-
   addPrecio(): void {
-    const primeraPres = this.presentacionesDelProducto()[0];
+    const primeraPres = this.presOptions()[0];
     this.precios.update(p => [...p, {
       idprodPresenta: primeraPres?.idprodPresenta ?? 0,
       idtipoCli: this.tiposCliente[0]?.idtipoCli ?? 0,
@@ -430,10 +453,12 @@ export default class ProductoFormComponent implements OnInit {
         for (const p of this.precios()) {
           let idprodPresenta = p.idprodPresenta;
 
-          // Para productos nuevos, mapear el idprodPresenta al real de la BD
-          if (!this.data && presGuardadas.length && !idprodPresenta) {
-            // Usar la primera presentación como default
-            idprodPresenta = presGuardadas[0]?.idprodPresenta;
+          // Para productos nuevos, mapear idprodPresenta temporal al real
+          if (!this.data && presGuardadas.length && idprodPresenta < 0) {
+            const idx = Math.abs(idprodPresenta) - 1;
+            const idpres = this.presentacionesArray.controls[idx]?.get('idpresentacion')?.value;
+            const real = presGuardadas.find((pg: any) => pg.idpresentacion === idpres);
+            idprodPresenta = real?.idprodPresenta ?? presGuardadas[0]?.idprodPresenta;
           }
 
           if (!idprodPresenta) {
