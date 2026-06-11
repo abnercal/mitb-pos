@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatTableModule } from '@angular/material/table';
@@ -10,9 +10,10 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatPaginatorModule } from '@angular/material/paginator';
 import { ProductoService } from '../../core/services/producto.service';
 import { Producto } from '../../core/interfaces/producto.interface';
-import { ProductoFormComponent } from '../form/producto-form.component';
+import ProductoFormComponent from '../form/producto-form.component';
 
 @Component({
   selector: 'app-productos-list',
@@ -20,7 +21,7 @@ import { ProductoFormComponent } from '../form/producto-form.component';
   imports: [
     CommonModule, FormsModule, MatTableModule, MatButtonModule, MatIconModule,
     MatCardModule, MatChipsModule, MatFormFieldModule, MatInputModule,
-    MatDialogModule, MatSnackBarModule,
+    MatDialogModule, MatSnackBarModule, MatPaginatorModule,
   ],
   template: `
     <div class="page-header">
@@ -34,12 +35,12 @@ import { ProductoFormComponent } from '../form/producto-form.component';
       <mat-card-header>
         <mat-form-field appearance="outline" class="search-field">
           <mat-label>Buscar producto</mat-label>
-          <input matInput [(ngModel)]="searchTerm" placeholder="Nombre, código o marca">
+          <input matInput [(ngModel)]="searchTerm" placeholder="Nombre, código o marca" (input)="onSearchChange()">
           <mat-icon matSuffix>search</mat-icon>
         </mat-form-field>
       </mat-card-header>
       <mat-card-content>
-        <table mat-table [dataSource]="filteredData()" class="full-table">
+        <table mat-table [dataSource]="data()" class="full-table">
           <ng-container matColumnDef="codigo">
             <th mat-header-cell *matHeaderCellDef>Código</th>
             <td mat-cell *matCellDef="let item"><strong>{{ item.codigoprod }}</strong></td>
@@ -60,9 +61,14 @@ import { ProductoFormComponent } from '../form/producto-form.component';
             <td mat-cell *matCellDef="let item">{{ item.Marca?.nombre || '—' }}</td>
           </ng-container>
 
-          <ng-container matColumnDef="precio">
-            <th mat-header-cell *matHeaderCellDef>Precio</th>
-            <td mat-cell *matCellDef="let item"><strong>Q {{ (item.precio || 0) | number:'.2' }}</strong></td>
+          <ng-container matColumnDef="presentaciones">
+            <th mat-header-cell *matHeaderCellDef>Presentaciones</th>
+            <td mat-cell *matCellDef="let item">
+              <span *ngFor="let p of item.Presentaciones; let last = last" class="pres-chip">
+                {{ p.Presentacion?.nombre || '?' }} <small>(x{{ p.cantidad_base }})</small>{{ last ? '' : ', ' }}
+              </span>
+              <span *ngIf="!item.Presentaciones?.length">—</span>
+            </td>
           </ng-container>
 
           <ng-container matColumnDef="estado">
@@ -93,6 +99,9 @@ import { ProductoFormComponent } from '../form/producto-form.component';
             </td>
           </tr>
         </table>
+        <mat-paginator [length]="totalItems()" [pageSize]="pageSize()"
+          [pageSizeOptions]="[5, 10, 25, 50]" (page)="onPage($event)">
+        </mat-paginator>
       </mat-card-content>
     </mat-card>
   `,
@@ -103,6 +112,7 @@ import { ProductoFormComponent } from '../form/producto-form.component';
     .full-table { width: 100%; }
     .empty-state { display: flex; flex-direction: column; align-items: center; padding: 40px; color: #999; }
     .empty-state mat-icon { font-size: 48px; width: 48px; height: 48px; margin-bottom: 12px; }
+    .pres-chip { font-size: 13px; }
   `],
 })
 export default class ProductosListComponent implements OnInit {
@@ -111,23 +121,33 @@ export default class ProductosListComponent implements OnInit {
   private readonly snackBar = inject(MatSnackBar);
 
   readonly data = signal<Producto[]>([]);
+  readonly totalItems = signal(0);
   readonly searchTerm = signal('');
-  readonly columns = ['codigo', 'nombre', 'categoria', 'marca', 'precio', 'estado', 'acciones'];
+  readonly pageIndex = signal(0);
+  readonly pageSize = signal(10);
+  readonly columns = ['codigo', 'nombre', 'categoria', 'marca', 'presentaciones', 'estado', 'acciones'];
 
-  readonly filteredData = computed(() => {
-    const term = this.searchTerm().toLowerCase();
-    if (!term) return this.data();
-    return this.data().filter(p =>
-      p.nombre.toLowerCase().includes(term) ||
-      String(p.codigoprod).includes(term) ||
-      (p.Marca?.nombre && p.Marca.nombre.toLowerCase().includes(term))
-    );
-  });
+  onSearchChange(): void {
+    this.pageIndex.set(0);
+    this.load();
+  }
+
+  onPage(e: { pageIndex: number; pageSize: number }): void {
+    this.pageIndex.set(e.pageIndex);
+    this.pageSize.set(e.pageSize);
+    this.load();
+  }
 
   ngOnInit(): void { this.load(); }
   private load(): void {
-    this.service.getAll().subscribe({
-      next: (res) => this.data.set(res),
+    const page = this.pageIndex() + 1;
+    const limit = this.pageSize();
+    const search = this.searchTerm();
+    this.service.getAll(page, limit, search).subscribe({
+      next: (res) => {
+        this.data.set(res.data);
+        this.totalItems.set(res.total);
+      },
       error: () => this.snackBar.open('Error al cargar productos', 'Cerrar', { duration: 3000 }),
     });
   }

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatTableModule } from '@angular/material/table';
@@ -13,6 +13,10 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { VentaService } from '../../core/services/venta.service';
 import { Venta } from '../../core/interfaces/venta.interface';
 import { VentaFormComponent } from '../form/venta-form.component';
+import { DetalleDialog, DetalleItem } from '../../shared/components/detalle-dialog.component';
+import { TicketVentaComponent } from '../../shared/components/ticket-venta.component';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatPaginatorModule } from '@angular/material/paginator';
 
 @Component({
   selector: 'app-ventas-list',
@@ -20,7 +24,7 @@ import { VentaFormComponent } from '../form/venta-form.component';
   imports: [
     CommonModule, FormsModule, MatTableModule, MatButtonModule, MatIconModule,
     MatCardModule, MatChipsModule, MatFormFieldModule, MatInputModule,
-    MatDialogModule, MatSnackBarModule,
+    MatDialogModule, MatSnackBarModule, MatTooltipModule, MatPaginatorModule,
   ],
   template: `
     <div class="page-header">
@@ -34,12 +38,12 @@ import { VentaFormComponent } from '../form/venta-form.component';
       <mat-card-header>
         <mat-form-field appearance="outline" class="search-field">
           <mat-label>Buscar venta</mat-label>
-          <input matInput [(ngModel)]="searchTerm" placeholder="Cliente o referencia">
+          <input matInput [(ngModel)]="searchTerm" placeholder="Cliente o referencia" (input)="onSearchChange()">
           <mat-icon matSuffix>search</mat-icon>
         </mat-form-field>
       </mat-card-header>
       <mat-card-content>
-        <table mat-table [dataSource]="filteredData()" class="full-table">
+        <table mat-table [dataSource]="data()" class="full-table">
           <ng-container matColumnDef="nombre">
             <th mat-header-cell *matHeaderCellDef>Referencia</th>
             <td mat-cell *matCellDef="let item"><strong>{{ item.nombre }}</strong></td>
@@ -69,6 +73,20 @@ import { VentaFormComponent } from '../form/venta-form.component';
             </td>
           </ng-container>
 
+          <ng-container matColumnDef="ticket">
+            <th mat-header-cell *matHeaderCellDef></th>
+            <td mat-cell *matCellDef="let item">
+              <button mat-icon-button (click)="openTicket(item)" matTooltip="Ticket"><mat-icon>receipt</mat-icon></button>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="detalle">
+            <th mat-header-cell *matHeaderCellDef></th>
+            <td mat-cell *matCellDef="let item">
+              <button mat-icon-button (click)="openDetalle(item)" matTooltip="Ver detalle"><mat-icon>visibility</mat-icon></button>
+            </td>
+          </ng-container>
+
           <ng-container matColumnDef="acciones">
             <th mat-header-cell *matHeaderCellDef>Acciones</th>
             <td mat-cell *matCellDef="let item">
@@ -87,6 +105,9 @@ import { VentaFormComponent } from '../form/venta-form.component';
             </td>
           </tr>
         </table>
+        <mat-paginator [length]="totalItems()" [pageSize]="pageSize()"
+          [pageSizeOptions]="[5, 10, 25, 50]" (page)="onPage($event)">
+        </mat-paginator>
       </mat-card-content>
     </mat-card>
   `,
@@ -105,23 +126,34 @@ export default class VentasListComponent implements OnInit {
   private readonly snackBar = inject(MatSnackBar);
 
   readonly data = signal<Venta[]>([]);
+  readonly totalItems = signal(0);
   readonly searchTerm = signal('');
-  readonly columns = ['nombre', 'cliente', 'fecha', 'total', 'estado', 'acciones'];
+  readonly pageIndex = signal(0);
+  readonly pageSize = signal(10);
+  readonly columns = ['nombre', 'cliente', 'fecha', 'total', 'estado', 'ticket', 'detalle', 'acciones'];
 
-  readonly filteredData = computed(() => {
-    const term = this.searchTerm().toLowerCase();
-    if (!term) return this.data();
-    return this.data().filter(v =>
-      v.nombre.toLowerCase().includes(term) ||
-      (v.Cliente?.nombres && v.Cliente.nombres.toLowerCase().includes(term))
-    );
-  });
+  onSearchChange(): void {
+    this.pageIndex.set(0);
+    this.load();
+  }
+
+  onPage(e: { pageIndex: number; pageSize: number }): void {
+    this.pageIndex.set(e.pageIndex);
+    this.pageSize.set(e.pageSize);
+    this.load();
+  }
 
   ngOnInit(): void { this.load(); }
 
   private load(): void {
-    this.service.getAll().subscribe({
-      next: (r) => this.data.set(r),
+    const page = this.pageIndex() + 1;
+    const limit = this.pageSize();
+    const search = this.searchTerm();
+    this.service.getAll(page, limit, search).subscribe({
+      next: (r) => {
+        this.data.set(r.data);
+        this.totalItems.set(r.total);
+      },
       error: () => this.snackBar.open('Error al cargar ventas', 'Cerrar', { duration: 3000 }),
     });
   }
@@ -129,6 +161,28 @@ export default class VentasListComponent implements OnInit {
   openCreate(): void {
     const ref = this.dialog.open(VentaFormComponent, { width: '750px', disableClose: true });
     ref.afterClosed().subscribe(r => { if (r) this.load(); });
+  }
+
+  openTicket(item: Venta): void {
+    this.dialog.open(TicketVentaComponent, {
+      width: '520px',
+      data: item,
+      autoFocus: false,
+    });
+  }
+
+  openDetalle(item: Venta): void {
+    const items: DetalleItem[] = (item.Detalles || []).map(d => ({
+      producto: (d.ProductoPresentacion?.Producto?.nombre || 'Producto') +
+                (d.ProductoPresentacion?.Presentacion?.nombre ? ` - ${d.ProductoPresentacion.Presentacion.nombre}` : ''),
+      cantidad: d.cantidad,
+      precioUnitario: Number(d.precio),
+      subtotal: Number(d.cantidad) * Number(d.precio),
+    }));
+    this.dialog.open(DetalleDialog, {
+      width: '600px',
+      data: { title: `Detalle: ${item.nombre}`, items, unitLabel: 'Precio' },
+    });
   }
 
   anular(item: Venta): void {

@@ -10,7 +10,13 @@ export class ProductoService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = `${environment.apiUrl}/productos`;
 
-  getAll(): Observable<Producto[]> {
+  getAll(page: number = 1, limit: number = 20, search: string = ''): Observable<{ data: Producto[]; total: number }> {
+    return this.http.get<ApiResponse<Producto[]>>(`${this.apiUrl}?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`).pipe(
+      map(r => ({ data: r.data, total: r.meta.total }))
+    );
+  }
+
+  getAllList(): Observable<Producto[]> {
     return this.http.get<ApiResponse<Producto[]>>(this.apiUrl).pipe(map(r => r.data));
   }
 

@@ -10,7 +10,13 @@ export class ProveedorService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = `${environment.apiUrl}/proveedor`; // singular en backend
 
-  getAll(): Observable<Proveedor[]> {
+  getAll(page: number = 1, limit: number = 20, search: string = ''): Observable<{ data: Proveedor[]; total: number }> {
+    return this.http.get<ApiResponse<Proveedor[]>>(`${this.apiUrl}?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`).pipe(
+      map(r => ({ data: r.data, total: r.meta.total }))
+    );
+  }
+
+  getAllList(): Observable<Proveedor[]> {
     return this.http.get<ApiResponse<Proveedor[]>>(this.apiUrl).pipe(map(r => r.data));
   }
 

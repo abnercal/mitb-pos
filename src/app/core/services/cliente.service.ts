@@ -10,7 +10,13 @@ export class ClienteService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = `${environment.apiUrl}/clientes`;
 
-  getAll(): Observable<Cliente[]> {
+  getAll(page: number = 1, limit: number = 20, search: string = ''): Observable<{ data: Cliente[]; total: number }> {
+    return this.http.get<ApiResponse<Cliente[]>>(`${this.apiUrl}?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`).pipe(
+      map(r => ({ data: r.data, total: r.meta.total }))
+    );
+  }
+
+  getAllList(): Observable<Cliente[]> {
     return this.http.get<ApiResponse<Cliente[]>>(this.apiUrl).pipe(map(r => r.data));
   }
 

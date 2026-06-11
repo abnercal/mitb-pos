@@ -4,6 +4,7 @@ import { RouterModule } from '@angular/router';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
@@ -17,7 +18,7 @@ import { MarcaFormComponent } from '../form/marca-form.component';
   standalone: true,
   imports: [
     CommonModule, RouterModule, MatTableModule, MatButtonModule, MatIconModule,
-    MatCardModule, MatChipsModule, MatDialogModule, MatSnackBarModule,
+    MatPaginatorModule, MatCardModule, MatChipsModule, MatDialogModule, MatSnackBarModule,
   ],
   template: `
     <div class="page-header">
@@ -60,6 +61,10 @@ import { MarcaFormComponent } from '../form/marca-form.component';
             </td>
           </tr>
         </table>
+
+        <mat-paginator [length]="totalItems()" [pageSize]="pageSize()"
+          [pageSizeOptions]="[5, 10, 25, 50]" (page)="onPage($event)">
+        </mat-paginator>
       </mat-card-content>
     </mat-card>
   `,
@@ -76,12 +81,20 @@ export default class MarcasListComponent implements OnInit {
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
   readonly data = signal<Marca[]>([]);
+  readonly totalItems = signal(0);
+  readonly pageIndex = signal(0);
+  readonly pageSize = signal(10);
   readonly columns = ['nombre', 'estado', 'acciones'];
 
   ngOnInit(): void { this.load(); }
   private load(): void {
-    this.service.getAll().subscribe({
-      next: (res) => this.data.set(res),
+    const page = this.pageIndex() + 1;
+    const limit = this.pageSize();
+    this.service.getAll(page, limit).subscribe({
+      next: (res) => {
+        this.data.set(res.data);
+        this.totalItems.set(res.total);
+      },
       error: () => this.snackBar.open('Error al cargar marcas', 'Cerrar', { duration: 3000 }),
     });
   }
@@ -93,6 +106,12 @@ export default class MarcasListComponent implements OnInit {
     const ref = this.dialog.open(MarcaFormComponent, { width: '450px', data: item });
     ref.afterClosed().subscribe(r => { if (r) this.load(); });
   }
+  onPage(e: { pageIndex: number; pageSize: number }): void {
+    this.pageIndex.set(e.pageIndex);
+    this.pageSize.set(e.pageSize);
+    this.load();
+  }
+
   delete(item: Marca): void {
     if (!confirm(`¿Eliminar la marca "${item.nombre}"?`)) return;
     this.service.delete(item._id!).subscribe({

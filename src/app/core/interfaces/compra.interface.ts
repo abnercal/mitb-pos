@@ -2,9 +2,14 @@ export interface CompraDetalle {
   _id?: number;
   cantidad: number;
   costo: number;
-  codigoprod: number;
+  idprodPresenta: number;
   idcompra?: string;
-  Producto?: { codigoprod: number; nombre: string };
+  ProductoPresentacion?: {
+    idprodPresenta: number;
+    cantidad_base: number;
+    Producto?: { codigoprod: number; nombre: string };
+    Presentacion?: { idpresentacion: number; nombre: string };
+  };
 }
 
 export interface Compra {

@@ -4,6 +4,7 @@ import { RouterModule } from '@angular/router';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
@@ -21,6 +22,7 @@ import { CategoriaFormComponent } from '../form/categoria-form.component';
     MatTableModule,
     MatButtonModule,
     MatIconModule,
+    MatPaginatorModule,
     MatCardModule,
     MatChipsModule,
     MatDialogModule,
@@ -75,6 +77,10 @@ import { CategoriaFormComponent } from '../form/categoria-form.component';
             </td>
           </tr>
         </table>
+
+        <mat-paginator [length]="totalItems()" [pageSize]="pageSize()"
+          [pageSizeOptions]="[5, 10, 25, 50]" (page)="onPage($event)">
+        </mat-paginator>
       </mat-card-content>
     </mat-card>
   `,
@@ -92,6 +98,9 @@ export default class CategoriasListComponent implements OnInit {
   private readonly snackBar = inject(MatSnackBar);
 
   readonly data = signal<Categoria[]>([]);
+  readonly totalItems = signal(0);
+  readonly pageIndex = signal(0);
+  readonly pageSize = signal(10);
   readonly columns = ['nombre', 'estado', 'acciones'];
 
   ngOnInit(): void {
@@ -99,8 +108,13 @@ export default class CategoriasListComponent implements OnInit {
   }
 
   private load(): void {
-    this.service.getAll().subscribe({
-      next: (res) => this.data.set(res),
+    const page = this.pageIndex() + 1;
+    const limit = this.pageSize();
+    this.service.getAll(page, limit).subscribe({
+      next: (res) => {
+        this.data.set(res.data);
+        this.totalItems.set(res.total);
+      },
       error: () => this.snackBar.open('Error al cargar categorías', 'Cerrar', { duration: 3000 }),
     });
   }
@@ -113,6 +127,12 @@ export default class CategoriasListComponent implements OnInit {
   openEdit(item: Categoria): void {
     const ref = this.dialog.open(CategoriaFormComponent, { width: '450px', data: item });
     ref.afterClosed().subscribe(result => { if (result) this.load(); });
+  }
+
+  onPage(e: { pageIndex: number; pageSize: number }): void {
+    this.pageIndex.set(e.pageIndex);
+    this.pageSize.set(e.pageSize);
+    this.load();
   }
 
   delete(item: Categoria): void {

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatTableModule } from '@angular/material/table';
@@ -10,9 +10,12 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatPaginatorModule } from '@angular/material/paginator';
 import { CompraService } from '../../core/services/compra.service';
 import { Compra } from '../../core/interfaces/compra.interface';
 import { CompraFormComponent } from '../form/compra-form.component';
+import { DetalleDialog, DetalleItem } from '../../shared/components/detalle-dialog.component';
 
 @Component({
   selector: 'app-compras-list',
@@ -20,7 +23,7 @@ import { CompraFormComponent } from '../form/compra-form.component';
   imports: [
     CommonModule, FormsModule, MatTableModule, MatButtonModule, MatIconModule,
     MatCardModule, MatChipsModule, MatFormFieldModule, MatInputModule,
-    MatDialogModule, MatSnackBarModule,
+    MatDialogModule, MatSnackBarModule, MatTooltipModule, MatPaginatorModule,
   ],
   template: `
     <div class="page-header">
@@ -34,12 +37,12 @@ import { CompraFormComponent } from '../form/compra-form.component';
       <mat-card-header>
         <mat-form-field appearance="outline" class="search-field">
           <mat-label>Buscar compra</mat-label>
-          <input matInput [(ngModel)]="searchTerm" placeholder="Proveedor o referencia">
+          <input matInput [(ngModel)]="searchTerm" placeholder="Proveedor o referencia" (input)="onSearchChange()">
           <mat-icon matSuffix>search</mat-icon>
         </mat-form-field>
       </mat-card-header>
       <mat-card-content>
-        <table mat-table [dataSource]="filteredData()" class="full-table">
+        <table mat-table [dataSource]="data()" class="full-table">
           <ng-container matColumnDef="nombre">
             <th mat-header-cell *matHeaderCellDef>Referencia</th>
             <td mat-cell *matCellDef="let item"><strong>{{ item.nombre }}</strong></td>
@@ -69,6 +72,13 @@ import { CompraFormComponent } from '../form/compra-form.component';
             </td>
           </ng-container>
 
+          <ng-container matColumnDef="detalle">
+            <th mat-header-cell *matHeaderCellDef></th>
+            <td mat-cell *matCellDef="let item">
+              <button mat-icon-button (click)="openDetalle(item)" matTooltip="Ver detalle"><mat-icon>visibility</mat-icon></button>
+            </td>
+          </ng-container>
+
           <ng-container matColumnDef="acciones">
             <th mat-header-cell *matHeaderCellDef>Acciones</th>
             <td mat-cell *matCellDef="let item">
@@ -87,6 +97,9 @@ import { CompraFormComponent } from '../form/compra-form.component';
             </td>
           </tr>
         </table>
+        <mat-paginator [length]="totalItems()" [pageSize]="pageSize()"
+          [pageSizeOptions]="[5, 10, 25, 50]" (page)="onPage($event)">
+        </mat-paginator>
       </mat-card-content>
     </mat-card>
   `,
@@ -105,23 +118,34 @@ export default class ComprasListComponent implements OnInit {
   private readonly snackBar = inject(MatSnackBar);
 
   readonly data = signal<Compra[]>([]);
+  readonly totalItems = signal(0);
   readonly searchTerm = signal('');
-  readonly columns = ['nombre', 'proveedor', 'fecha', 'total', 'estado', 'acciones'];
+  readonly pageIndex = signal(0);
+  readonly pageSize = signal(10);
+  readonly columns = ['nombre', 'proveedor', 'fecha', 'total', 'estado', 'detalle', 'acciones'];
 
-  readonly filteredData = computed(() => {
-    const term = this.searchTerm().toLowerCase();
-    if (!term) return this.data();
-    return this.data().filter(c =>
-      c.nombre.toLowerCase().includes(term) ||
-      (c.Proveedor?.nombre && c.Proveedor.nombre.toLowerCase().includes(term))
-    );
-  });
+  onSearchChange(): void {
+    this.pageIndex.set(0);
+    this.load();
+  }
+
+  onPage(e: { pageIndex: number; pageSize: number }): void {
+    this.pageIndex.set(e.pageIndex);
+    this.pageSize.set(e.pageSize);
+    this.load();
+  }
 
   ngOnInit(): void { this.load(); }
 
   private load(): void {
-    this.service.getAll().subscribe({
-      next: (r) => this.data.set(r),
+    const page = this.pageIndex() + 1;
+    const limit = this.pageSize();
+    const search = this.searchTerm();
+    this.service.getAll(page, limit, search).subscribe({
+      next: (r) => {
+        this.data.set(r.data);
+        this.totalItems.set(r.total);
+      },
       error: () => this.snackBar.open('Error al cargar compras', 'Cerrar', { duration: 3000 }),
     });
   }
@@ -129,6 +153,20 @@ export default class ComprasListComponent implements OnInit {
   openCreate(): void {
     const ref = this.dialog.open(CompraFormComponent, { width: '750px', disableClose: true });
     ref.afterClosed().subscribe(r => { if (r) this.load(); });
+  }
+
+  openDetalle(item: Compra): void {
+    const items: DetalleItem[] = (item.Detalles || []).map(d => ({
+      producto: (d.ProductoPresentacion?.Producto?.nombre || 'Producto') +
+                (d.ProductoPresentacion?.Presentacion?.nombre ? ` - ${d.ProductoPresentacion.Presentacion.nombre}` : ''),
+      cantidad: d.cantidad,
+      precioUnitario: Number(d.costo),
+      subtotal: Number(d.cantidad) * Number(d.costo),
+    }));
+    this.dialog.open(DetalleDialog, {
+      width: '600px',
+      data: { title: `Detalle: ${item.nombre}`, items, unitLabel: 'Costo' },
+    });
   }
 
   anular(item: Compra): void {

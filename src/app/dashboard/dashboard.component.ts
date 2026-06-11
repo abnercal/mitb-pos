@@ -1,187 +1,132 @@
-import { Component, inject } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
-import { ConfigService } from '../core/services/config.service';
+import { MatTableModule } from '@angular/material/table';
+import { MatChipsModule } from '@angular/material/chips';
+import { RouterModule } from '@angular/router';
+import { VentaService } from '../core/services/venta.service';
+import { ProductoService } from '../core/services/producto.service';
+import { ProveedorService } from '../core/services/proveedor.service';
+import { ClienteService } from '../core/services/cliente.service';
+import { Venta } from '../core/interfaces/venta.interface';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule],
+  imports: [CommonModule, MatCardModule, MatIconModule, MatTableModule, MatChipsModule, RouterModule],
   template: `
-    <div class="dashboard">
-      <h1 class="page-title">Dashboard</h1>
+    <h1 class="page-title">Dashboard</h1>
 
-      <div class="stats-grid">
-        <mat-card class="stat-card">
-          <mat-card-content>
-            <div class="stat">
-              <mat-icon class="stat-icon sales-icon">point_of_sale</mat-icon>
-              <div class="stat-info">
-                <span class="stat-value">—</span>
-                <span class="stat-label">Ventas hoy</span>
-              </div>
-            </div>
-          </mat-card-content>
-        </mat-card>
+    <div class="cards-grid">
+      <mat-card class="stat-card sales">
+        <mat-icon>point_of_sale</mat-icon>
+        <div class="stat-info">
+          <span class="stat-label">Ventas hoy</span>
+          <span class="stat-value">Q {{ todaySales() | number:'.2' }}</span>
+        </div>
+      </mat-card>
 
-        <mat-card class="stat-card">
-          <mat-card-content>
-            <div class="stat">
-              <mat-icon class="stat-icon product-icon">inventory_2</mat-icon>
-              <div class="stat-info">
-                <span class="stat-value">—</span>
-                <span class="stat-label">Productos</span>
-              </div>
-            </div>
-          </mat-card-content>
-        </mat-card>
+      <mat-card class="stat-card count">
+        <mat-icon>inventory_2</mat-icon>
+        <div class="stat-info">
+          <span class="stat-label">Productos</span>
+          <span class="stat-value">{{ totalProductos() }}</span>
+        </div>
+      </mat-card>
 
-        <mat-card class="stat-card">
-          <mat-card-content>
-            <div class="stat">
-              <mat-icon class="stat-icon warning-icon">warning</mat-icon>
-              <div class="stat-info">
-                <span class="stat-value">—</span>
-                <span class="stat-label">Stock bajo</span>
-              </div>
-            </div>
-          </mat-card-content>
-        </mat-card>
+      <mat-card class="stat-card clients">
+        <mat-icon>people_outline</mat-icon>
+        <div class="stat-info">
+          <span class="stat-label">Clientes</span>
+          <span class="stat-value">{{ totalClientes() }}</span>
+        </div>
+      </mat-card>
 
-        <mat-card class="stat-card">
-          <mat-card-content>
-            <div class="stat">
-              <mat-icon class="stat-icon client-icon">people</mat-icon>
-              <div class="stat-info">
-                <span class="stat-value">—</span>
-                <span class="stat-label">Clientes</span>
-              </div>
-            </div>
-          </mat-card-content>
-        </mat-card>
-      </div>
-
-      <div class="welcome-card">
-        <mat-card>
-          <mat-card-content>
-            <h2>Bienvenido a {{ config.get().appName }}</h2>
-            <p>
-              Sistema de gestión comercial. Usá el menú lateral para navegar
-              entre los módulos.
-            </p>
-            <p class="config-hint">
-              <mat-icon>info</mat-icon>
-              Configurá tu empresa, moneda e impuestos en
-              <strong>Configuración</strong>.
-            </p>
-          </mat-card-content>
-        </mat-card>
-      </div>
+      <mat-card class="stat-card providers">
+        <mat-icon>local_shipping</mat-icon>
+        <div class="stat-info">
+          <span class="stat-label">Proveedores</span>
+          <span class="stat-value">{{ totalProveedores() }}</span>
+        </div>
+      </mat-card>
     </div>
+
+    <mat-card class="table-card">
+      <mat-card-header>
+        <mat-card-title>Últimas ventas</mat-card-title>
+        <a mat-button routerLink="/ventas" class="header-link">Ver todas</a>
+      </mat-card-header>
+      <mat-card-content>
+        <table mat-table [dataSource]="recentSales()" class="full-table">
+          <ng-container matColumnDef="nombre">
+            <th mat-header-cell *matHeaderCellDef>Referencia</th>
+            <td mat-cell *matCellDef="let item">{{ item.nombre }}</td>
+          </ng-container>
+          <ng-container matColumnDef="cliente">
+            <th mat-header-cell *matHeaderCellDef>Cliente</th>
+            <td mat-cell *matCellDef="let item">{{ item.Cliente?.nombres || 'Mostrador' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="total">
+            <th mat-header-cell *matHeaderCellDef>Total</th>
+            <td mat-cell *matCellDef="let item"><strong>Q {{ (item.total || 0) | number:'.2' }}</strong></td>
+          </ng-container>
+          <ng-container matColumnDef="fecha">
+            <th mat-header-cell *matHeaderCellDef>Fecha</th>
+            <td mat-cell *matCellDef="let item">{{ (item.fecha || item.createdAt) | date:'short' }}</td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="['nombre','cliente','total','fecha']"></tr>
+          <tr mat-row *matRowDef="let row; columns: ['nombre','cliente','total','fecha']"></tr>
+          <tr class="mat-row" *matNoDataRow>
+            <td [attr.colspan]="4"><div class="empty-state"><p>No hay ventas recientes</p></div></td>
+          </tr>
+        </table>
+      </mat-card-content>
+    </mat-card>
   `,
-  styles: [
-    `
-      .dashboard {
-        max-width: 1200px;
-        margin: 0 auto;
-      }
-
-      .page-title {
-        font-size: 24px;
-        font-weight: 500;
-        margin-bottom: 24px;
-        color: #333;
-      }
-
-      .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-        gap: 16px;
-        margin-bottom: 24px;
-      }
-
-      .stat-card {
-        cursor: default;
-      }
-
-      .stat {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-      }
-
-      .stat-icon {
-        font-size: 40px;
-        width: 40px;
-        height: 40px;
-        padding: 12px;
-        border-radius: 8px;
-      }
-
-      .sales-icon {
-        color: #1565c0;
-        background: #e3f2fd;
-      }
-
-      .product-icon {
-        color: #2e7d32;
-        background: #e8f5e9;
-      }
-
-      .warning-icon {
-        color: #e65100;
-        background: #fff3e0;
-      }
-
-      .client-icon {
-        color: #6a1b9a;
-        background: #f3e5f5;
-      }
-
-      .stat-info {
-        display: flex;
-        flex-direction: column;
-      }
-
-      .stat-value {
-        font-size: 28px;
-        font-weight: 700;
-        color: #333;
-      }
-
-      .stat-label {
-        font-size: 14px;
-        color: #666;
-      }
-
-      .welcome-card {
-        margin-top: 16px;
-      }
-
-      .welcome-card h2 {
-        margin: 0 0 12px;
-        color: #333;
-      }
-
-      .welcome-card p {
-        margin: 0 0 8px;
-        color: #555;
-        line-height: 1.6;
-      }
-
-      .config-hint {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 12px;
-        background: #fff8e1;
-        border-radius: 4px;
-        font-size: 14px;
-      }
-    `,
-  ],
+  styles: [`
+    .page-title { font-size: 24px; font-weight: 500; margin: 0 0 20px 0; }
+    .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat-card { display: flex; align-items: center; gap: 16px; padding: 20px; }
+    .stat-card mat-icon { font-size: 40px; width: 40px; height: 40px; }
+    .stat-info { display: flex; flex-direction: column; }
+    .stat-label { font-size: 13px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-value { font-size: 24px; font-weight: 700; margin-top: 4px; }
+    .sales mat-icon { color: #1565c0; }
+    .count mat-icon { color: #2e7d32; }
+    .clients mat-icon { color: #6a1b9a; }
+    .providers mat-icon { color: #e65100; }
+    .table-card { margin-top: 8px; }
+    .header-link { margin-left: auto; }
+    .full-table { width: 100%; }
+    .empty-state { text-align: center; padding: 24px; color: #999; }
+  `],
 })
-export default class DashboardComponent {
-  readonly config = inject(ConfigService);
+export default class DashboardComponent implements OnInit {
+  private readonly ventaService = inject(VentaService);
+  private readonly productoService = inject(ProductoService);
+  private readonly proveedorService = inject(ProveedorService);
+  private readonly clienteService = inject(ClienteService);
+
+  readonly totalProductos = signal(0);
+  readonly totalClientes = signal(0);
+  readonly totalProveedores = signal(0);
+  readonly todaySales = signal(0);
+  readonly recentSales = signal<Venta[]>([]);
+
+  ngOnInit(): void {
+    this.productoService.getAllList().subscribe(r => this.totalProductos.set(r.length));
+    this.clienteService.getAllList().subscribe(r => this.totalClientes.set(r.length));
+    this.proveedorService.getAllList().subscribe(r => this.totalProveedores.set(r.length));
+
+    this.ventaService.getAllList().subscribe(r => {
+      const today = new Date().toDateString();
+      const hoy = r.filter(v => {
+        const d = v.fecha || v.createdAt;
+        return d && new Date(d).toDateString() === today;
+      });
+      this.todaySales.set(hoy.reduce((sum, v) => sum + (v.total || 0), 0));
+      this.recentSales.set(r.slice(0, 10));
+    });
+  }
 }

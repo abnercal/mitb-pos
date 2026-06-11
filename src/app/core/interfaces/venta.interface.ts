@@ -2,9 +2,15 @@ export interface VentaDetalle {
   _id?: number;
   cantidad: number;
   precio: number;
-  codigoprod: number;
+  idprodPresenta: number;
   idorden?: string;
-  Producto?: { codigoprod: number; nombre: string };
+  ProductoPresentacion?: {
+    idprodPresenta: number;
+    cantidad_base: number;
+    precio_venta: number;
+    Producto?: { codigoprod: number; nombre: string };
+    Presentacion?: { idpresentacion: number; nombre: string };
+  };
 }
 
 export interface VentaPago {

@@ -10,7 +10,13 @@ export class UnidadService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = `${environment.apiUrl}/unidades`;
 
-  getAll(): Observable<Unidad[]> {
+  getAll(page: number = 1, limit: number = 20): Observable<{ data: Unidad[]; total: number }> {
+    return this.http.get<ApiResponse<Unidad[]>>(`${this.apiUrl}?page=${page}&limit=${limit}`).pipe(
+      map(r => ({ data: r.data, total: r.meta.total }))
+    );
+  }
+
+  getAllList(): Observable<Unidad[]> {
     return this.http.get<ApiResponse<Unidad[]>>(this.apiUrl).pipe(map(r => r.data));
   }
 

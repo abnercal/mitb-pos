@@ -12,8 +12,25 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { VentaService } from '../../core/services/venta.service';
 import { ClienteService } from '../../core/services/cliente.service';
 import { ProductoService } from '../../core/services/producto.service';
+import { AuthService } from '../../core/services/auth.service';
 import { Cliente } from '../../core/interfaces/cliente.interface';
 import { Producto } from '../../core/interfaces/producto.interface';
+
+interface PresOption {
+  idprodPresenta: number;
+  label: string;
+  nombre: string;
+  presentacion: string;
+  precioVenta: number;
+}
+
+interface DetalleVenta {
+  idprodPresenta: number;
+  nombre: string;
+  presentacion: string;
+  cantidad: number;
+  precio: number;
+}
 
 @Component({
   selector: 'app-venta-form',
@@ -29,9 +46,8 @@ import { Producto } from '../../core/interfaces/producto.interface';
       <mat-dialog-content>
         <div class="form-row">
           <mat-form-field appearance="fill" class="flex-2">
-            <mat-label>Referencia *</mat-label>
-            <input matInput formControlName="nombre" placeholder="Ej: POS-001" autocomplete="off">
-            <mat-error>Requerido</mat-error>
+            <mat-label>Referencia</mat-label>
+            <input matInput [value]="nextCode()" disabled placeholder="Generando...">
           </mat-form-field>
 
           <mat-form-field appearance="fill" class="flex-1">
@@ -46,9 +62,11 @@ import { Producto } from '../../core/interfaces/producto.interface';
         <h3>Detalle de productos</h3>
         <div class="detalle-row">
           <mat-form-field appearance="fill" class="flex-2">
-            <mat-label>Producto</mat-label>
-            <mat-select [(value)]="selectedProducto">
-              <mat-option *ngFor="let p of productos" [value]="p">{{ p.nombre }} ({{ p.codigoprod }})</mat-option>
+            <mat-label>Producto — Presentación</mat-label>
+            <mat-select [(value)]="selectedPres">
+              <mat-option *ngFor="let opt of presOptions()" [value]="opt">
+                {{ opt.label }}
+              </mat-option>
             </mat-select>
           </mat-form-field>
           <mat-form-field appearance="fill" class="flex-1">
@@ -59,7 +77,7 @@ import { Producto } from '../../core/interfaces/producto.interface';
             <mat-label>Precio Q</mat-label>
             <input matInput type="number" step="0.01" [(ngModel)]="newPrecio" [ngModelOptions]="{standalone: true}" min="0">
           </mat-form-field>
-          <button mat-icon-button color="primary" (click)="addDetalle()" [disabled]="!selectedProducto || !newCantidad">
+          <button mat-icon-button color="primary" (click)="addDetalle()" [disabled]="!selectedPres || !newCantidad">
             <mat-icon>add_circle</mat-icon>
           </button>
         </div>
@@ -68,6 +86,10 @@ import { Producto } from '../../core/interfaces/producto.interface';
           <ng-container matColumnDef="producto">
             <th mat-header-cell *matHeaderCellDef>Producto</th>
             <td mat-cell *matCellDef="let item">{{ item.nombre }}</td>
+          </ng-container>
+          <ng-container matColumnDef="presentacion">
+            <th mat-header-cell *matHeaderCellDef>Presentación</th>
+            <td mat-cell *matCellDef="let item">{{ item.presentacion }}</td>
           </ng-container>
           <ng-container matColumnDef="cantidad">
             <th mat-header-cell *matHeaderCellDef>Cant.</th>
@@ -102,7 +124,7 @@ import { Producto } from '../../core/interfaces/producto.interface';
       </mat-dialog-content>
       <mat-dialog-actions align="end">
         <button mat-button type="button" mat-dialog-close>Cancelar</button>
-        <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid || !detalles().length">
+        <button mat-raised-button color="primary" type="submit" [disabled]="!nextCode() || !detalles().length">
           Registrar venta
         </button>
       </mat-dialog-actions>
@@ -124,40 +146,63 @@ export class VentaFormComponent implements OnInit {
   private readonly productoService = inject(ProductoService);
   private readonly dialogRef = inject(MatDialogRef<VentaFormComponent>);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly authService = inject(AuthService);
 
   clientes: Cliente[] = [];
-  productos: Producto[] = [];
+  readonly productos = signal<Producto[]>([]);
 
-  selectedProducto: Producto | null = null;
+  readonly nextCode = signal<string | null>(null);
+
+  selectedPres: PresOption | null = null;
   newCantidad = 1;
   newPrecio = 0;
 
-  readonly detalles = signal<{ codigoprod: number; nombre: string; cantidad: number; precio: number }[]>([]);
-  readonly detalleColumns = ['producto', 'cantidad', 'precio', 'subtotal', 'accion'];
+  readonly detalles = signal<DetalleVenta[]>([]);
+  readonly detalleColumns = ['producto', 'presentacion', 'cantidad', 'precio', 'subtotal', 'accion'];
 
   readonly total = computed(() =>
     this.detalles().reduce((sum, d) => sum + d.cantidad * d.precio, 0)
   );
 
+  readonly presOptions = computed<PresOption[]>(() =>
+    this.productos().flatMap(p =>
+      (p.Presentaciones || [])
+        .filter(pp => pp.estado !== 0)
+        .map(pp => ({
+          idprodPresenta: pp.idprodPresenta!,
+          label: `${p.nombre} — ${pp.Presentacion?.nombre || 'Sin nombre'} (Q ${Number(pp.precio_venta || 0).toFixed(2)})`,
+          nombre: p.nombre,
+          presentacion: pp.Presentacion?.nombre || '',
+          precioVenta: Number(pp.precio_venta || 0),
+        }))
+    )
+  );
+
   readonly form = this.fb.group({
-    nombre: ['', Validators.required],
     idcliente: [null as number | null],
   });
 
   ngOnInit(): void {
-    this.clienteService.getAll().subscribe(r => this.clientes = r);
-    this.productoService.getAll().subscribe(r => this.productos = r);
+    this.clienteService.getAllList().subscribe(r => this.clientes = r);
+    this.productoService.getAllList().subscribe(r => this.productos.set(r));
+
+    // Obtener el siguiente código de venta
+    this.service.getNextCode().subscribe({
+      next: (r) => this.nextCode.set(r.codigo),
+      error: () => this.nextCode.set('Error al generar código'),
+    });
   }
 
   addDetalle(): void {
-    if (!this.selectedProducto || !this.newCantidad) return;
+    if (!this.selectedPres || !this.newCantidad) return;
     this.detalles.update(d => [...d, {
-      codigoprod: this.selectedProducto!.codigoprod!,
-      nombre: this.selectedProducto!.nombre,
+      idprodPresenta: this.selectedPres!.idprodPresenta,
+      nombre: this.selectedPres!.nombre,
+      presentacion: this.selectedPres!.presentacion,
       cantidad: this.newCantidad,
       precio: this.newPrecio,
     }]);
-    this.selectedProducto = null;
+    this.selectedPres = null;
     this.newCantidad = 1;
     this.newPrecio = 0;
   }
@@ -167,23 +212,29 @@ export class VentaFormComponent implements OnInit {
   }
 
   submit(): void {
-    if (this.form.invalid || !this.detalles().length) return;
+    if (!this.nextCode() || !this.detalles().length) return;
+
+    const session = this.authService.getSession();
+    if (!session) {
+      this.snackBar.open('No hay sesión activa', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
     const v = this.form.getRawValue();
     const totalCalculado = this.total();
-    const payload = {
-      nombre: v.nombre,
+    this.service.create({
+      nombre: this.nextCode(),
       idcliente: v.idcliente || undefined,
-      idsucursal: 1,
-      idusuario: 1,
+      idsucursal: session.user.idsucursal,
+      idusuario: session.user.id,
       total_orden: totalCalculado,
       detalles: this.detalles().map(d => ({
-        codigoprod: d.codigoprod,
+        idprodPresenta: d.idprodPresenta,
         cantidad: d.cantidad,
         precio: d.precio,
       })),
-      pago: { idtipopago: 1, importe: totalCalculado, estado: 'pagado' },
-    };
-    this.service.create(payload).subscribe({
+      pago: { idtipopago: 3, importe: totalCalculado, estado: 'pagado' },
+    }).subscribe({
       next: () => { this.snackBar.open('Venta registrada', 'Cerrar', { duration: 2000 }); this.dialogRef.close(true); },
       error: () => this.snackBar.open('Error al registrar venta', 'Cerrar', { duration: 3000 }),
     });

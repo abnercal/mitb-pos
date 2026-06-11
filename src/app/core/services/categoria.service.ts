@@ -10,7 +10,13 @@ export class CategoriaService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = `${environment.apiUrl}/categorias`;
 
-  getAll(): Observable<Categoria[]> {
+  getAll(page: number = 1, limit: number = 20): Observable<{ data: Categoria[]; total: number }> {
+    return this.http.get<ApiResponse<Categoria[]>>(`${this.apiUrl}?page=${page}&limit=${limit}`).pipe(
+      map(r => ({ data: r.data, total: r.meta.total }))
+    );
+  }
+
+  getAllList(): Observable<Categoria[]> {
     return this.http.get<ApiResponse<Categoria[]>>(this.apiUrl).pipe(map(r => r.data));
   }
 

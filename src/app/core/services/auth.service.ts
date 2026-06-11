@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Router } from '@angular/router';
+import { ModuloService } from './modulo.service';
 
 export interface LoginResponse {
   ok: boolean;
@@ -17,7 +18,8 @@ export interface LoginResponse {
       username: string;
       imagen: string | null;
       imageUrl: string | null;
-      Roles?: { _id: number; nombrerol: string }[];
+      idsucursal: number | null;
+      Roles?: { _id: number; nombrerol: string; Permisos?: { _id: number; nombre: string }[] }[];
     };
   };
 }
@@ -30,7 +32,9 @@ export interface UserSession {
     apellido: string;
     email: string;
     username: string;
+    idsucursal: number | null;
     roles: string[];
+    permisos: string[];
   };
 }
 
@@ -38,6 +42,7 @@ export interface UserSession {
 export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
+  private readonly modulos = inject(ModuloService);
   private readonly apiUrl = `${environment.apiUrl}/auth`;
   private readonly TOKEN_KEY = 'auth_token';
   private readonly USER_KEY = 'auth_user';
@@ -48,6 +53,13 @@ export class AuthService {
       .pipe(
         tap((res) => {
           if (res.ok && res.data) {
+            const permisos = [
+              ...new Set(
+                res.data.usuario.Roles?.flatMap((r) =>
+                  r.Permisos?.map((p) => p.nombre) || []
+                ) || []
+              ),
+            ];
             const session: UserSession = {
               token: res.data.token,
               user: {
@@ -56,11 +68,14 @@ export class AuthService {
                 apellido: res.data.usuario.apellido,
                 email: res.data.usuario.email,
                 username: res.data.usuario.username,
+                idsucursal: res.data.usuario.idsucursal,
                 roles:
                   res.data.usuario.Roles?.map((r) => r.nombrerol) || [],
+                permisos,
               },
             };
             this.setSession(session);
+            this.modulos.load().subscribe();
           }
         })
       );
@@ -69,6 +84,7 @@ export class AuthService {
   logout(): void {
     localStorage.removeItem(this.TOKEN_KEY);
     localStorage.removeItem(this.USER_KEY);
+    this.modulos.clear();
     this.router.navigate(['/login']);
   }
 
@@ -92,6 +108,15 @@ export class AuthService {
 
   hasAnyRole(roles: string[]): boolean {
     return roles.some((r) => this.hasRole(r));
+  }
+
+  hasPermiso(permiso: string): boolean {
+    const session = this.getSession();
+    return session?.user.permisos.includes(permiso) ?? false;
+  }
+
+  hasAnyPermiso(permisos: string[]): boolean {
+    return permisos.some((p) => this.hasPermiso(p));
   }
 
   private setSession(session: UserSession): void {

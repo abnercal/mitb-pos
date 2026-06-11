@@ -10,7 +10,13 @@ export class MarcaService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = `${environment.apiUrl}/marcas`;
 
-  getAll(): Observable<Marca[]> {
+  getAll(page: number = 1, limit: number = 20): Observable<{ data: Marca[]; total: number }> {
+    return this.http.get<ApiResponse<Marca[]>>(`${this.apiUrl}?page=${page}&limit=${limit}`).pipe(
+      map(r => ({ data: r.data, total: r.meta.total }))
+    );
+  }
+
+  getAllList(): Observable<Marca[]> {
     return this.http.get<ApiResponse<Marca[]>>(this.apiUrl).pipe(map(r => r.data));
   }
 

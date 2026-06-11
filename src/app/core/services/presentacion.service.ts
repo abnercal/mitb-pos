@@ -10,7 +10,13 @@ export class PresentacionService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = `${environment.apiUrl}/presentaciones`;
 
-  getAll(): Observable<Presentacion[]> {
+  getAll(page: number = 1, limit: number = 20): Observable<{ data: Presentacion[]; total: number }> {
+    return this.http.get<ApiResponse<Presentacion[]>>(`${this.apiUrl}?page=${page}&limit=${limit}`).pipe(
+      map(r => ({ data: r.data, total: r.meta.total }))
+    );
+  }
+
+  getAllList(): Observable<Presentacion[]> {
     return this.http.get<ApiResponse<Presentacion[]>>(this.apiUrl).pipe(map(r => r.data));
   }
 
