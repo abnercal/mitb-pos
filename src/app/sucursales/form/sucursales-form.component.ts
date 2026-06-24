@@ -8,14 +8,12 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { SucursalService } from '../../core/services/sucursal.service';
 import { Sucursal } from '../../core/interfaces/sucursal.interface';
 
-export interface SucursalFormData { sucursal: Sucursal | null; }
-
 @Component({
   selector: 'app-sucursales-form',
   standalone: true,
   imports: [CommonModule, FormsModule, MatDialogModule, MatButtonModule, MatInputModule, MatSnackBarModule],
   template: `
-    <h2 mat-dialog-title>{{ data.sucursal ? 'Editar sucursal' : 'Nueva sucursal' }}</h2>
+    <h2 mat-dialog-title>{{ data ? 'Editar sucursal' : 'Nueva sucursal' }}</h2>
     <mat-dialog-content>
       <div class="form-grid">
         <mat-form-field appearance="outline">
@@ -45,29 +43,29 @@ export interface SucursalFormData { sucursal: Sucursal | null; }
 export class SucursalesFormComponent implements OnInit {
   private readonly service = inject(SucursalService);
   private readonly dialogRef = inject(MatDialogRef<SucursalesFormComponent>);
-  readonly data: SucursalFormData = inject(MAT_DIALOG_DATA);
+  readonly data: Sucursal | null = inject(MAT_DIALOG_DATA);
   private readonly snackBar = inject(MatSnackBar);
   readonly saving = signal(false);
   form = { nombre: '', direccion: '', telefono: '' };
 
   ngOnInit(): void {
-    if (this.data.sucursal) {
+    if (this.data) {
       this.form = {
-        nombre: this.data.sucursal.nombre,
-        direccion: this.data.sucursal.direccion || '',
-        telefono: this.data.sucursal.telefono || '',
+        nombre: this.data.nombre,
+        direccion: this.data.direccion || '',
+        telefono: this.data.telefono || '',
       };
     }
   }
 
   save(): void {
     this.saving.set(true);
-    const obs = this.data.sucursal
-      ? this.service.update(this.data.sucursal._id!, this.form)
+    const obs = this.data
+      ? this.service.update(this.data.idsucursal!, this.form)
       : this.service.create(this.form);
     obs.subscribe({
       next: () => {
-        this.snackBar.open(this.data.sucursal ? 'Sucursal actualizada' : 'Sucursal creada', 'Cerrar', { duration: 2000 });
+        this.snackBar.open(this.data ? 'Sucursal actualizada' : 'Sucursal creada', 'Cerrar', { duration: 2000 });
         this.dialogRef.close(true);
       },
       error: () => { this.snackBar.open('Error al guardar', 'Cerrar', { duration: 3000 }); this.saving.set(false); },

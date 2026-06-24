@@ -44,11 +44,27 @@ import { TipoClie } from '../../core/interfaces/cliente.interface';
     .toggle-row { margin: 16px 0; }
     .section-title { display: flex; align-items: center; gap: 12px; margin: 20px 0 12px; font-size: 16px; font-weight: 500; }
     .pres-grid { display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px; }
-    .pres-row { display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; }
-    .pres-select { flex: 2; }
-    .pres-qty { flex: 1; }
-    .pres-price { flex: 1; }
-    .pres-barcode { flex: 1.5; }
+    .pres-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1.5fr auto;
+      gap: 8px;
+      align-items: start;
+    }
+    @media (max-width: 599px) {
+      .pres-row {
+        grid-template-columns: 1fr 1fr;
+      }
+      .pres-select { grid-column: 1 / -1; }
+      .pres-barcode { grid-column: 1; }
+      .pres-price { grid-column: 2; }
+      .pres-qty { grid-column: 1; }
+      .pres-row button[type="button"] {
+        grid-column: 2;
+        justify-self: end;
+        align-self: start;
+        margin-top: 4px;
+      }
+    }
     .pres-empty { text-align: center; padding: 20px; background: #f5f5f5; border-radius: 8px; color: #999; font-size: 14px; }
     .precios-table { display: flex; flex-direction: column; gap: 8px; margin: 8px 0; }
     .precios-header { display: flex; gap: 8px; font-size: 12px; font-weight: 600; color: #666; text-transform: uppercase; padding: 0 4px; flex-wrap: wrap; }

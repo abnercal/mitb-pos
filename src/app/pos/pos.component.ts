@@ -426,14 +426,7 @@ export default class PosComponent implements OnInit {
       width: '500px',
       disableClose: true,
       data: {
-        onDetect: (code: string) => {
-          return new Promise<boolean>((resolve) => {
-            this.productoService.getAll(1, 10, code).subscribe({
-              next: (result) => resolve(result.data.length > 0),
-              error: () => resolve(false),
-            });
-          });
-        },
+        onDetect: (_code: string) => Promise.resolve(true),
       },
     });
     ref.afterClosed().subscribe((code: string | null) => {

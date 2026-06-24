@@ -96,6 +96,6 @@ export default class SucursalesListComponent extends BaseListComponent<Sucursal>
     return this.sucursalService.delete(id as number);
   }
 
-  protected override getId(item: Sucursal): number | string { return item._id!; }
+  protected override getId(item: Sucursal): number | string { return item.idsucursal!; }
   protected override getDisplayName(item: Sucursal): string { return item.nombre; }
 }
