@@ -83,21 +83,38 @@ export class BarcodeScannerComponent implements OnInit, OnDestroy {
 
   private async startScanning(): Promise<void> {
     try {
-      const { BrowserMultiFormatReader } = await import('@zxing/library');
-      this.codeReader = new BrowserMultiFormatReader(undefined, 200);
+      const { BrowserMultiFormatReader, DecodeHintType } = await import('@zxing/library');
+
+      // TRY_HARDER mejora detección de códigos 1D (barras) y en condiciones
+      // de iluminación/bajo contraste. Es más lento but más preciso.
+      const hints = new Map<any, any>();
+      hints.set(DecodeHintType.TRY_HARDER, true);
+
+      this.codeReader = new BrowserMultiFormatReader(hints, 200);
 
       const video = this.createVideoElement();
       this.container.nativeElement.appendChild(video);
 
-      // decodeFromVideoDevice se encarga de getUserMedia + attach + decode loop
-      await this.codeReader.decodeFromVideoDevice(null, video, (result) => {
-        if (this.destroyed) return;
-        const code = result?.getText();
-        if (code) {
-          this.stopScanning();
-          this.verifyCode(code);
-        }
-      });
+      // Usamos decodeFromConstraints para pasar resolución mínima explícita,
+      // lo que mejora la detección de códigos de barras 1D (necesitan más pixeles)
+      await this.codeReader.decodeFromConstraints(
+        {
+          video: {
+            facingMode: 'environment',
+            width: { min: 640, ideal: 1280 },
+            height: { min: 480, ideal: 720 },
+          },
+        },
+        video,
+        (result) => {
+          if (this.destroyed) return;
+          const code = result?.getText();
+          if (code) {
+            this.stopScanning();
+            this.verifyCode(code);
+          }
+        },
+      );
 
       this.ngZone.run(() => {
         this.loading = false;
@@ -187,16 +204,16 @@ export class BarcodeScannerComponent implements OnInit, OnDestroy {
   private showHttpsError(): void {
     this.ngZone.run(() => {
       this.error = [
-        'La cámara requiere una conexión segura (HTTPS).',
+        'La cámara requiere HTTPS para funcionar en mobile.',
         '',
-        'Para probar en mobile:',
-        '  Opción 1 — ng serve con SSL (recomendado):',
-        '    ng serve --ssl --host 0.0.0.0',
-        '    Luego accedé con https://192.168.x.x:4200',
+        'Ejecutá en tu PC:',
+        '  npm run dev-ssl',
         '',
-        '  Opción 2 — ngrok:',
-        '    ngrok http 4200',
-        '    Usá la URL https://xxxx.ngrok.io',
+        'Y accedé desde el celular con:',
+        '  https://192.168.x.x:4200',
+        '',
+        '(El browser va a mostrar advertencia de certificado,',
+        ' hace click en "Advanced → Proceed anyway")',
       ].join('\n');
       this.loading = false;
     });
