@@ -8,6 +8,14 @@ export interface ScannerDialogData {
   onDetect: (code: string) => Promise<boolean>;
 }
 
+/** Formatos 1D que necesitamos para POS */
+const FORMATS_1D = new Set([
+  'ean_13', 'ean_8', 'upc_a', 'upc_e',
+  'code_128', 'code_39', 'codabar', 'itf',
+]);
+
+type DecoderFn = (video: HTMLVideoElement) => Promise<string | null>;
+
 @Component({
   selector: 'app-barcode-scanner',
   standalone: true,
@@ -67,7 +75,11 @@ export class BarcodeScannerComponent implements OnInit, OnDestroy {
   error = '';
   hintText = '';
 
-  private codeReader: import('@zxing/library').BrowserMultiFormatReader | null = null;
+  private stream: MediaStream | null = null;
+  private videoEl: HTMLVideoElement | null = null;
+  private detectTimer: ReturnType<typeof setInterval> | null = null;
+  private decoderFn: DecoderFn | null = null;
+  private decoderLabel = '';
   private destroyed = false;
 
   // ── Inicialización ─────────────────────────────────────────────
@@ -83,55 +95,149 @@ export class BarcodeScannerComponent implements OnInit, OnDestroy {
 
   private async startScanning(): Promise<void> {
     try {
-      const { BrowserMultiFormatReader, DecodeHintType } = await import('@zxing/library');
-
-      // TRY_HARDER mejora detección de códigos 1D (barras) y en condiciones
-      // de iluminación/bajo contraste. Es más lento but más preciso.
-      const hints = new Map<any, any>();
-      hints.set(DecodeHintType.TRY_HARDER, true);
-
-      this.codeReader = new BrowserMultiFormatReader(hints, 200);
-
-      const video = this.createVideoElement();
-      this.container.nativeElement.appendChild(video);
-
-      // Usamos decodeFromConstraints para pasar resolución mínima explícita,
-      // lo que mejora la detección de códigos de barras 1D (necesitan más pixeles)
-      await this.codeReader.decodeFromConstraints(
-        {
-          video: {
-            facingMode: 'environment',
-            width: { min: 640, ideal: 1280 },
-            height: { min: 480, ideal: 720 },
-          },
+      // 1. Pedir cámara con resolución decente
+      this.stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: 'environment',
+          width: { min: 640, ideal: 1280 },
+          height: { min: 480, ideal: 720 },
         },
-        video,
-        (result) => {
-          if (this.destroyed) return;
-          const code = result?.getText();
-          if (code) {
-            this.stopScanning();
-            this.verifyCode(code);
-          }
-        },
-      );
+      });
+
+      // 2. Crear video y mostrarlo
+      this.videoEl = document.createElement('video');
+      this.videoEl.srcObject = this.stream;
+      this.videoEl.setAttribute('playsinline', '');
+      this.videoEl.muted = true;
+      this.videoEl.style.width = '100%';
+      this.videoEl.style.height = '100%';
+      this.videoEl.style.objectFit = 'cover';
+      this.container.nativeElement.appendChild(this.videoEl);
+      await this.videoEl.play();
+
+      // 3. Esperar que el video tenga frames
+      if (this.videoEl.readyState < 2) {
+        await new Promise<void>((resolve) => {
+          this.videoEl!.onloadeddata = () => resolve();
+        });
+      }
+      await this.ensureVideoDimensions();
+
+      // 4. Elegir el mejor decoder
+      this.decoderFn = await this.selectDecoder();
+      if (!this.decoderFn) {
+        this.error = 'No hay decoder disponible en este navegador.';
+        this.loading = false;
+        return;
+      }
 
       this.ngZone.run(() => {
         this.loading = false;
-        this.hintText = 'Enfocá un código de barras o QR';
+        this.hintText = this.decoderLabel
+          ? `Usando ${this.decoderLabel} — enfocá un código de barras o QR`
+          : 'Enfocá un código de barras o QR';
       });
+
+      this.startDetection();
     } catch (err: any) {
       this.handleError(err);
     }
   }
 
-  private createVideoElement(): HTMLVideoElement {
-    const video = document.createElement('video');
-    video.setAttribute('playsinline', '');
-    video.style.width = '100%';
-    video.style.height = '100%';
-    video.style.objectFit = 'cover';
-    return video;
+  private async ensureVideoDimensions(): Promise<void> {
+    while (this.videoEl && (this.videoEl.videoWidth === 0 || this.videoEl.videoHeight === 0)) {
+      await new Promise(r => setTimeout(r, 100));
+    }
+  }
+
+  // ── Selección de decoder (NATIVO primero, ZXing fallback) ─────
+
+  private async selectDecoder(): Promise<DecoderFn | null> {
+    // 1. Nativo: BarcodeDetector — soporta 1D + QR en mobile Firefox/Chrome
+    const native = await this.tryNativeDecoder();
+    if (native) return native;
+
+    // 2. Fallback: ZXing vía BrowserMultiFormatReader
+    return this.tryZxingDecoder();
+  }
+
+  // ── Decoder nativo (BarcodeDetector) ───────────────────────────
+
+  private async tryNativeDecoder(): Promise<DecoderFn | null> {
+    const BD = (window as any).BarcodeDetector;
+    if (!BD) return null;
+
+    let supported: string[];
+    try {
+      supported = await BD.getSupportedFormats();
+    } catch {
+      return null;
+    }
+
+    // Necesitamos al menos QR o un formato 1D
+    const hasUseful = supported.some((f: string) => f === 'qr_code' || FORMATS_1D.has(f));
+    if (!hasUseful) return null;
+
+    const formats = supported.filter((f: string) => f === 'qr_code' || FORMATS_1D.has(f));
+
+    let detector: any;
+    try {
+      detector = new BD({ formats });
+    } catch {
+      return null;
+    }
+
+    this.decoderLabel = `Nativo (${formats.join(', ')})`;
+
+    return async (video: HTMLVideoElement) => {
+      try {
+        const barcodes = await detector.detect(video);
+        return barcodes.length > 0 ? (barcodes[0].rawValue as string) : null;
+      } catch {
+        return null;
+      }
+    };
+  }
+
+  // ── Decoder ZXing (fallback para desktop Chrome) ──────────────
+
+  private zxingReader: import('@zxing/library').BrowserMultiFormatReader | null = null;
+
+  private async tryZxingDecoder(): Promise<DecoderFn | null> {
+    try {
+      const { BrowserMultiFormatReader, DecodeHintType } = await import('@zxing/library');
+      const hints = new Map<any, any>();
+      hints.set(DecodeHintType.TRY_HARDER, true);
+
+      const reader = new BrowserMultiFormatReader(hints, 200);
+      this.zxingReader = reader;
+      this.decoderLabel = 'ZXing (JS)';
+
+      return async (video: HTMLVideoElement) => {
+        try {
+          const bitmap = reader.createBinaryBitmap(video);
+          const result = reader.decodeBitmap(bitmap);
+          return result.getText();
+        } catch {
+          return null;
+        }
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  // ── Loop de detección ─────────────────────────────────────────
+
+  private startDetection(): void {
+    if (this.destroyed || !this.decoderFn) return;
+    this.detectTimer = setInterval(async () => {
+      if (this.destroyed || !this.videoEl || !this.decoderFn) return;
+      const code = await this.decoderFn(this.videoEl);
+      if (!code) return;
+      this.stopDetection();
+      await this.verifyCode(code);
+    }, 300);
   }
 
   // ── Verificación ───────────────────────────────────────────────
@@ -145,59 +251,61 @@ export class BarcodeScannerComponent implements OnInit, OnDestroy {
     try {
       const found = await this.data?.onDetect(code) ?? true;
       if (found) {
-        this.cleanup();
+        this.stopAll();
         this.ngZone.run(() => this.dialogRef.close(code));
       } else {
         this.ngZone.run(() => {
           this.error = `Código "${code}" no encontrado en sistema`;
           this.checking = false;
         });
-        await this.startScanning();
+        this.startDetection();
       }
     } catch {
       this.ngZone.run(() => {
         this.error = 'Error al verificar código';
         this.checking = false;
       });
-      await this.startScanning();
+      this.startDetection();
     }
-  }
-
-  // ── Control de scanner ─────────────────────────────────────────
-
-  private stopScanning(): void {
-    this.codeReader?.stopContinuousDecode();
-    this.codeReader?.stopAsyncDecode();
   }
 
   // ── Limpieza ───────────────────────────────────────────────────
 
-  private cleanup(): void {
-    if (this.codeReader) {
-      try { this.codeReader.reset(); } catch { /* ignore */ }
-      this.codeReader = null;
+  private stopDetection(): void {
+    if (this.detectTimer) {
+      clearInterval(this.detectTimer);
+      this.detectTimer = null;
     }
-    const video = this.container?.nativeElement?.querySelector('video');
-    if (video?.parentNode) {
-      video.parentNode.removeChild(video);
+  }
+
+  private stopAll(): void {
+    this.destroyed = true;
+    this.stopDetection();
+
+    if (this.zxingReader) {
+      try { this.zxingReader.reset(); } catch { /* ignore */ }
+      this.zxingReader = null;
+    }
+    this.stream?.getTracks().forEach(t => t.stop());
+    this.stream = null;
+    if (this.videoEl?.parentNode) {
+      this.videoEl.parentNode.removeChild(this.videoEl);
+      this.videoEl = null;
     }
   }
 
   ngOnDestroy(): void {
-    this.destroyed = true;
-    this.cleanup();
+    this.stopAll();
   }
 
   cancel(): void {
-    this.destroyed = true;
-    this.cleanup();
+    this.stopAll();
     this.dialogRef.close(null);
   }
 
   // ── Helpers ────────────────────────────────────────────────────
 
   private isSecureContext(): boolean {
-    // navigator.mediaDevices solo existe en contextos seguros (HTTPS o localhost)
     return !!(navigator.mediaDevices?.getUserMedia);
   }
 
@@ -212,8 +320,7 @@ export class BarcodeScannerComponent implements OnInit, OnDestroy {
         'Y accedé desde el celular con:',
         '  https://192.168.x.x:4200',
         '',
-        '(El browser va a mostrar advertencia de certificado,',
-        ' hace click en "Advanced → Proceed anyway")',
+        '(Si ves advertencia de certificado, usa Firefox en el celular)',
       ].join('\n');
       this.loading = false;
     });
