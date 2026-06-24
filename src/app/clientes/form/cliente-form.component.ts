@@ -19,69 +19,7 @@ import { Cliente, TipoClie } from '../../core/interfaces/cliente.interface';
     CommonModule, ReactiveFormsModule, MatDialogModule, MatFormFieldModule,
     MatInputModule, MatSelectModule, MatButtonModule, MatSlideToggleModule, MatSnackBarModule,
   ],
-  template: `
-    <h2 mat-dialog-title>{{ data ? 'Editar' : 'Nuevo' }} cliente</h2>
-    <form [formGroup]="form" (ngSubmit)="submit()">
-      <mat-dialog-content>
-        <div class="form-row">
-          <mat-form-field appearance="fill" class="flex-1">
-            <mat-label>Nombres *</mat-label>
-            <input matInput formControlName="nombres" placeholder="Nombres del cliente" autocomplete="off">
-            <mat-error>Los nombres son requeridos</mat-error>
-          </mat-form-field>
-
-          <mat-form-field appearance="fill" class="flex-1">
-            <mat-label>Apellidos</mat-label>
-            <input matInput formControlName="apellidos" placeholder="Apellidos" autocomplete="off">
-          </mat-form-field>
-        </div>
-
-        <div class="form-row">
-          <mat-form-field appearance="fill" class="flex-1">
-            <mat-label>Tipo de cliente *</mat-label>
-            <mat-select formControlName="idtipoCli">
-              <mat-option *ngFor="let t of tipos" [value]="t.idtipoCli">{{ t.nombre }}</mat-option>
-            </mat-select>
-            <mat-error>El tipo es requerido</mat-error>
-          </mat-form-field>
-
-          <mat-form-field appearance="fill" class="flex-1">
-            <mat-label>NIT</mat-label>
-            <input matInput formControlName="nit" placeholder="NIT" autocomplete="off">
-          </mat-form-field>
-        </div>
-
-        <div class="form-row">
-          <mat-form-field appearance="fill" class="flex-1">
-            <mat-label>Teléfono</mat-label>
-            <input matInput formControlName="telefono" placeholder="Ej: 1234-5678" autocomplete="off">
-          </mat-form-field>
-
-          <mat-form-field appearance="fill" class="flex-1">
-            <mat-label>Email</mat-label>
-            <input matInput formControlName="email" placeholder="correo@ejemplo.com" autocomplete="off" type="email">
-          </mat-form-field>
-        </div>
-
-        <mat-form-field appearance="fill" class="full-width">
-          <mat-label>Dirección</mat-label>
-          <input matInput formControlName="direccion" placeholder="Dirección del cliente" autocomplete="off">
-        </mat-form-field>
-
-        <div class="toggle-row">
-          <mat-slide-toggle formControlName="estado" color="primary">
-            {{ form.get('estado')?.value ? 'Activo' : 'Inactivo' }}
-          </mat-slide-toggle>
-        </div>
-      </mat-dialog-content>
-      <mat-dialog-actions align="end">
-        <button mat-button type="button" mat-dialog-close>Cancelar</button>
-        <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid">
-          {{ data ? 'Actualizar' : 'Crear' }}
-        </button>
-      </mat-dialog-actions>
-    </form>
-  `,
+  templateUrl: './cliente-form.component.html',
   styles: [`
     .full-width { width: 100%; margin-bottom: 16px; }
     .form-row { display: flex; gap: 16px; margin-bottom: 16px; }

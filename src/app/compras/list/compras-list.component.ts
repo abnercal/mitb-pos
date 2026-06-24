@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatTableModule } from '@angular/material/table';
@@ -12,10 +12,14 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatPaginatorModule } from '@angular/material/paginator';
+import { BaseListComponent } from '../../shared/components/base-list/base-list';
 import { CompraService } from '../../core/services/compra.service';
 import { Compra } from '../../core/interfaces/compra.interface';
 import { CompraFormComponent } from '../form/compra-form.component';
 import { DetalleDialog, DetalleItem } from '../../shared/components/detalle-dialog.component';
+import { ConfirmDeleteDialog } from '../../shared/components/confirm-delete-dialog';
+import { Observable, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
 @Component({
   selector: 'app-compras-list',
@@ -27,7 +31,7 @@ import { DetalleDialog, DetalleItem } from '../../shared/components/detalle-dial
   ],
   template: `
     <div class="page-header">
-      <h1>Compras</h1>
+      <h1>{{ title }}</h1>
       <button mat-raised-button color="primary" (click)="openCreate()">
         <mat-icon>add</mat-icon> Nueva compra
       </button>
@@ -48,22 +52,18 @@ import { DetalleDialog, DetalleItem } from '../../shared/components/detalle-dial
             <th mat-header-cell *matHeaderCellDef>Referencia</th>
             <td mat-cell *matCellDef="let item"><strong>{{ item.nombre }}</strong></td>
           </ng-container>
-
           <ng-container matColumnDef="proveedor">
             <th mat-header-cell *matHeaderCellDef>Proveedor</th>
             <td mat-cell *matCellDef="let item">{{ item.Proveedor?.nombre || '—' }}</td>
           </ng-container>
-
           <ng-container matColumnDef="fecha">
             <th mat-header-cell *matHeaderCellDef>Fecha</th>
             <td mat-cell *matCellDef="let item">{{ (item.fecha || item.createdAt) | date:'shortDate' }}</td>
           </ng-container>
-
           <ng-container matColumnDef="total">
             <th mat-header-cell *matHeaderCellDef>Total</th>
             <td mat-cell *matCellDef="let item"><strong>Q {{ (item.total || 0) | number:'.2' }}</strong></td>
           </ng-container>
-
           <ng-container matColumnDef="estado">
             <th mat-header-cell *matHeaderCellDef>Estado</th>
             <td mat-cell *matCellDef="let item">
@@ -72,27 +72,23 @@ import { DetalleDialog, DetalleItem } from '../../shared/components/detalle-dial
               </mat-chip>
             </td>
           </ng-container>
-
           <ng-container matColumnDef="detalle">
             <th mat-header-cell *matHeaderCellDef></th>
             <td mat-cell *matCellDef="let item">
               <button mat-icon-button (click)="openDetalle(item)" matTooltip="Ver detalle"><mat-icon>visibility</mat-icon></button>
             </td>
           </ng-container>
-
           <ng-container matColumnDef="acciones">
             <th mat-header-cell *matHeaderCellDef>Acciones</th>
             <td mat-cell *matCellDef="let item">
               <button mat-icon-button color="warn" (click)="anular(item)" matTooltip="Anular"><mat-icon>cancel</mat-icon></button>
             </td>
           </ng-container>
-
           <tr mat-header-row *matHeaderRowDef="columns"></tr>
           <tr mat-row *matRowDef="let row; columns: columns"></tr>
           <tr class="mat-row" *matNoDataRow>
             <td class="mat-cell" [attr.colspan]="columns.length">
-              <div class="empty-state">
-                <mat-icon>shopping_cart</mat-icon>
+              <div class="empty-state"><mat-icon>shopping_cart</mat-icon>
                 <p>{{ searchTerm() ? 'Sin resultados' : 'No hay compras registradas' }}</p>
               </div>
             </td>
@@ -114,48 +110,33 @@ import { DetalleDialog, DetalleItem } from '../../shared/components/detalle-dial
     .empty-state mat-icon { font-size: 48px; width: 48px; height: 48px; margin-bottom: 12px; }
   `],
 })
-export default class ComprasListComponent implements OnInit {
-  private readonly service = inject(CompraService);
-  private readonly dialog = inject(MatDialog);
-  private readonly snackBar = inject(MatSnackBar);
+export default class ComprasListComponent extends BaseListComponent<Compra> {
+  override title = 'Compras';
+  override entityName = 'compras';
+  override formComponent = CompraFormComponent;
+  override dialogWidth = '750px';
+  override columns = ['nombre', 'proveedor', 'fecha', 'total', 'estado', 'detalle', 'acciones'];
 
-  readonly data = signal<Compra[]>([]);
-  readonly totalItems = signal(0);
   readonly searchTerm = signal('');
-  readonly pageIndex = signal(0);
-  readonly pageSize = signal(10);
-  readonly columns = ['nombre', 'proveedor', 'fecha', 'total', 'estado', 'detalle', 'acciones'];
 
-  onSearchChange(): void {
-    this.pageIndex.set(0);
-    this.load();
+  private readonly compraService = inject(CompraService);
+  private readonly dialog2 = inject(MatDialog);
+  private readonly snackBar2 = inject(MatSnackBar);
+
+  protected override buildParams(): { page: number; limit: number; search: string } {
+    return { page: this.pageIndex() + 1, limit: this.pageSize(), search: this.searchTerm() };
   }
 
-  onPage(e: { pageIndex: number; pageSize: number }): void {
-    this.pageIndex.set(e.pageIndex);
-    this.pageSize.set(e.pageSize);
-    this.load();
+  protected override loadService(page: number, limit: number, search?: string): Observable<{ data: Compra[]; total: number }> {
+    return this.compraService.getAll(page, limit, search);
   }
 
-  ngOnInit(): void { this.load(); }
-
-  private load(): void {
-    const page = this.pageIndex() + 1;
-    const limit = this.pageSize();
-    const search = this.searchTerm();
-    this.service.getAll(page, limit, search).subscribe({
-      next: (r) => {
-        this.data.set(r.data);
-        this.totalItems.set(r.total);
-      },
-      error: () => this.snackBar.open('Error al cargar compras', 'Cerrar', { duration: 3000 }),
-    });
+  protected override deleteService(): Observable<void> {
+    return of(undefined);
   }
 
-  openCreate(): void {
-    const ref = this.dialog.open(CompraFormComponent, { width: '750px', disableClose: true });
-    ref.afterClosed().subscribe(r => { if (r) this.load(); });
-  }
+  protected override getId(item: Compra): number | string { return item._id!; }
+  protected override getDisplayName(item: Compra): string { return item.nombre; }
 
   openDetalle(item: Compra): void {
     const items: DetalleItem[] = (item.Detalles || []).map(d => ({
@@ -165,17 +146,26 @@ export default class ComprasListComponent implements OnInit {
       precioUnitario: Number(d.costo),
       subtotal: Number(d.cantidad) * Number(d.costo),
     }));
-    this.dialog.open(DetalleDialog, {
+    this.dialog2.open(DetalleDialog, {
       width: '600px',
       data: { title: `Detalle: ${item.nombre}`, items, unitLabel: 'Costo' },
     });
   }
 
   anular(item: Compra): void {
-    if (!confirm(`¿Anular la compra "${item.nombre}"?`)) return;
-    this.service.anular(item._id!).subscribe({
-      next: () => { this.snackBar.open('Compra anulada', 'Cerrar', { duration: 2000 }); this.load(); },
-      error: () => this.snackBar.open('Error al anular', 'Cerrar', { duration: 3000 }),
+    const ref = this.dialog2.open(ConfirmDeleteDialog, {
+      width: '400px',
+      data: { name: item.nombre },
+    });
+    ref.afterClosed().subscribe(confirmed => {
+      if (!confirmed) return;
+      this.compraService.anular(item._id!).pipe(catchError(() => {
+        this.snackBar2.open('Error al anular compra', 'Cerrar', { duration: 3000 });
+        return of(undefined);
+      })).subscribe(() => {
+        this.snackBar2.open('Compra anulada', 'Cerrar', { duration: 2000 });
+        this.load();
+      });
     });
   }
 }

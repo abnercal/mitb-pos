@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
@@ -6,11 +6,13 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatDialogModule } from '@angular/material/dialog';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
+import { BaseListComponent } from '../../shared/components/base-list/base-list';
 import { UnidadService } from '../../core/services/unidad.service';
 import { Unidad } from '../../core/interfaces/unidad.interface';
 import { UnidadFormComponent } from '../form/unidad-form.component';
+import { Observable } from 'rxjs';
 
 @Component({
   selector: 'app-unidades-list',
@@ -21,7 +23,7 @@ import { UnidadFormComponent } from '../form/unidad-form.component';
   ],
   template: `
     <div class="page-header">
-      <h1>Unidades de Medida</h1>
+      <h1>{{ title }}</h1>
       <button mat-raised-button color="primary" (click)="openCreate()">
         <mat-icon>add</mat-icon> Nueva unidad
       </button>
@@ -35,12 +37,10 @@ import { UnidadFormComponent } from '../form/unidad-form.component';
             <th mat-header-cell *matHeaderCellDef>Nombre</th>
             <td mat-cell *matCellDef="let item">{{ item.nombre }}</td>
           </ng-container>
-
           <ng-container matColumnDef="abreviatura">
             <th mat-header-cell *matHeaderCellDef>Abreviatura</th>
             <td mat-cell *matCellDef="let item"><strong>{{ item.abreviatura }}</strong></td>
           </ng-container>
-
           <ng-container matColumnDef="estado">
             <th mat-header-cell *matHeaderCellDef>Estado</th>
             <td mat-cell *matCellDef="let item">
@@ -49,7 +49,6 @@ import { UnidadFormComponent } from '../form/unidad-form.component';
               </mat-chip>
             </td>
           </ng-container>
-
           <ng-container matColumnDef="acciones">
             <th mat-header-cell *matHeaderCellDef>Acciones</th>
             <td mat-cell *matCellDef="let item">
@@ -57,7 +56,6 @@ import { UnidadFormComponent } from '../form/unidad-form.component';
               <button mat-icon-button color="warn" (click)="delete(item)" matTooltip="Eliminar"><mat-icon>delete</mat-icon></button>
             </td>
           </ng-container>
-
           <tr mat-header-row *matHeaderRowDef="columns"></tr>
           <tr mat-row *matRowDef="let row; columns: columns"></tr>
           <tr class="mat-row" *matNoDataRow>
@@ -67,7 +65,6 @@ import { UnidadFormComponent } from '../form/unidad-form.component';
           </tr>
         </table>
         </div>
-
         <mat-paginator [length]="totalItems()" [pageSize]="pageSize()"
           [pageSizeOptions]="[5, 10, 25, 50]" (page)="onPage($event)">
         </mat-paginator>
@@ -82,47 +79,23 @@ import { UnidadFormComponent } from '../form/unidad-form.component';
     .empty-state mat-icon { font-size: 48px; width: 48px; height: 48px; margin-bottom: 12px; }
   `],
 })
-export default class UnidadesListComponent implements OnInit {
-  private readonly service = inject(UnidadService);
-  private readonly dialog = inject(MatDialog);
-  private readonly snackBar = inject(MatSnackBar);
-  readonly data = signal<Unidad[]>([]);
-  readonly totalItems = signal(0);
-  readonly pageIndex = signal(0);
-  readonly pageSize = signal(10);
-  readonly columns = ['nombre', 'abreviatura', 'estado', 'acciones'];
+export default class UnidadesListComponent extends BaseListComponent<Unidad> {
+  override title = 'Unidades de Medida';
+  override entityName = 'unidades';
+  override formComponent = UnidadFormComponent;
+  override dialogWidth = '450px';
+  override columns = ['nombre', 'abreviatura', 'estado', 'acciones'];
 
-  ngOnInit(): void { this.load(); }
-  private load(): void {
-    const page = this.pageIndex() + 1;
-    const limit = this.pageSize();
-    this.service.getAll(page, limit).subscribe({
-      next: (res) => {
-        this.data.set(res.data);
-        this.totalItems.set(res.total);
-      },
-      error: () => this.snackBar.open('Error al cargar unidades', 'Cerrar', { duration: 3000 }),
-    });
-  }
-  openCreate(): void {
-    const ref = this.dialog.open(UnidadFormComponent, { width: '450px' });
-    ref.afterClosed().subscribe(r => { if (r) this.load(); });
-  }
-  openEdit(item: Unidad): void {
-    const ref = this.dialog.open(UnidadFormComponent, { width: '450px', data: item });
-    ref.afterClosed().subscribe(r => { if (r) this.load(); });
-  }
-  onPage(e: { pageIndex: number; pageSize: number }): void {
-    this.pageIndex.set(e.pageIndex);
-    this.pageSize.set(e.pageSize);
-    this.load();
+  private readonly unidadService = inject(UnidadService);
+
+  protected override loadService(page: number, limit: number): Observable<{ data: Unidad[]; total: number }> {
+    return this.unidadService.getAll(page, limit);
   }
 
-  delete(item: Unidad): void {
-    if (!confirm(`¿Eliminar la unidad "${item.nombre}"?`)) return;
-    this.service.delete(item._id!).subscribe({
-      next: () => { this.snackBar.open('Unidad eliminada', 'Cerrar', { duration: 2000 }); this.load(); },
-      error: () => this.snackBar.open('Error al eliminar', 'Cerrar', { duration: 3000 }),
-    });
+  protected override deleteService(id: number | string): Observable<void> {
+    return this.unidadService.delete(id as number);
   }
+
+  protected override getId(item: Unidad): number | string { return item._id!; }
+  protected override getDisplayName(item: Unidad): string { return item.nombre; }
 }

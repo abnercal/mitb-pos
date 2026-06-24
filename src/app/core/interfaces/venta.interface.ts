@@ -28,10 +28,14 @@ export interface Venta {
   idcliente?: number;
   idestado?: number;
   total?: number;
+  total_orden?: number;
   idusuario?: number;
   idsucursal?: number;
+  Sucursal?: { _id: number; nombre: string };
   Cliente?: { _id: number; nombres: string; apellidos?: string };
   Detalles?: VentaDetalle[];
+  detalles?: VentaDetalle[];
   Pago?: VentaPago;
+  pago?: VentaPago;
   createdAt?: string;
 }

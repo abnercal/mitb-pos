@@ -40,96 +40,7 @@ interface DetalleCompra {
     MatInputModule, MatSelectModule, MatButtonModule, MatIconModule,
     MatTableModule, MatSnackBarModule,
   ],
-  template: `
-    <h2 mat-dialog-title>Nueva compra</h2>
-    <form [formGroup]="form" (ngSubmit)="submit()">
-      <mat-dialog-content>
-        <div class="form-row">
-          <mat-form-field appearance="fill" class="flex-2">
-            <mat-label>Referencia</mat-label>
-            <input matInput [value]="nextCode()" disabled placeholder="Generando...">
-          </mat-form-field>
-
-          <mat-form-field appearance="fill" class="flex-1">
-            <mat-label>Proveedor *</mat-label>
-            <mat-select formControlName="idproveedor">
-              <mat-option *ngFor="let p of proveedores" [value]="p._id">{{ p.nombre }}</mat-option>
-            </mat-select>
-            <mat-error>Requerido</mat-error>
-          </mat-form-field>
-        </div>
-
-        <h3>Detalle de productos</h3>
-        <div class="detalle-row">
-          <mat-form-field appearance="fill" class="flex-2">
-            <mat-label>Producto — Presentación</mat-label>
-            <mat-select [(value)]="selectedPres">
-              <mat-option *ngFor="let opt of presOptions()" [value]="opt">
-                {{ opt.label }}
-              </mat-option>
-            </mat-select>
-          </mat-form-field>
-          <mat-form-field appearance="fill" class="flex-1">
-            <mat-label>Cantidad</mat-label>
-            <input matInput type="number" [(ngModel)]="newCantidad" [ngModelOptions]="{standalone: true}" min="1">
-          </mat-form-field>
-          <mat-form-field appearance="fill" class="flex-1">
-            <mat-label>Costo</mat-label>
-            <input matInput type="number" step="0.01" [(ngModel)]="newCosto" [ngModelOptions]="{standalone: true}" min="0">
-          </mat-form-field>
-          <button mat-icon-button color="primary" type="button" (click)="addDetalle()" [disabled]="!selectedPres || !newCantidad">
-            <mat-icon>add_circle</mat-icon>
-          </button>
-        </div>
-
-        <table mat-table [dataSource]="detalles()" class="full-table">
-          <ng-container matColumnDef="producto">
-            <th mat-header-cell *matHeaderCellDef>Producto</th>
-            <td mat-cell *matCellDef="let item; let i = index">{{ item.nombre }}</td>
-          </ng-container>
-          <ng-container matColumnDef="presentacion">
-            <th mat-header-cell *matHeaderCellDef>Presentación</th>
-            <td mat-cell *matCellDef="let item">{{ item.presentacion }}</td>
-          </ng-container>
-          <ng-container matColumnDef="cantidad">
-            <th mat-header-cell *matHeaderCellDef>Cant.</th>
-            <td mat-cell *matCellDef="let item">{{ item.cantidad }}</td>
-          </ng-container>
-          <ng-container matColumnDef="costo">
-            <th mat-header-cell *matHeaderCellDef>Costo</th>
-            <td mat-cell *matCellDef="let item">Q {{ item.costo | number:'.2' }}</td>
-          </ng-container>
-          <ng-container matColumnDef="subtotal">
-            <th mat-header-cell *matHeaderCellDef>Subtotal</th>
-            <td mat-cell *matCellDef="let item">Q {{ (item.cantidad * item.costo) | number:'.2' }}</td>
-          </ng-container>
-          <ng-container matColumnDef="accion">
-            <th mat-header-cell *matHeaderCellDef></th>
-            <td mat-cell *matCellDef="let item; let i = index">
-              <button mat-icon-button color="warn" (click)="removeDetalle(i)" size="small"><mat-icon>remove_circle</mat-icon></button>
-            </td>
-          </ng-container>
-          <tr mat-header-row *matHeaderRowDef="detalleColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: detalleColumns"></tr>
-          <tr class="mat-row" *matNoDataRow>
-            <td class="mat-cell" [attr.colspan]="detalleColumns.length">
-              <p class="empty-detalle">Agregá productos a la compra</p>
-            </td>
-          </tr>
-        </table>
-
-        <div class="total-row">
-          <strong>Total: Q {{ total() | number:'.2' }}</strong>
-        </div>
-      </mat-dialog-content>
-      <mat-dialog-actions align="end">
-        <button mat-button type="button" mat-dialog-close>Cancelar</button>
-        <button mat-raised-button color="primary" type="submit" [disabled]="!nextCode() || form.invalid || !detalles().length">
-          Registrar compra
-        </button>
-      </mat-dialog-actions>
-    </form>
-  `,
+  templateUrl: './compra-form.component.html',
   styles: [`
     .form-row { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
     .flex-1 { flex: 1; } .flex-2 { flex: 2; }
@@ -222,9 +133,9 @@ export class CompraFormComponent implements OnInit {
 
     const v = this.form.getRawValue();
     this.service.create({
-      nombre: this.nextCode(),
-      idproveedor: v.idproveedor,
-      idsucursal: session.user.idsucursal,
+      nombre: this.nextCode() ?? '',
+      idproveedor: v.idproveedor ?? undefined,
+      idsucursal: session.user.idsucursal ?? undefined,
       idusuario: session.user.id,
       detalles: this.detalles().map(d => ({
         idprodPresenta: d.idprodPresenta,

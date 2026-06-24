@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
@@ -6,11 +6,13 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatDialogModule } from '@angular/material/dialog';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
+import { BaseListComponent } from '../../shared/components/base-list/base-list';
 import { PresentacionService } from '../../core/services/presentacion.service';
 import { Presentacion } from '../../core/interfaces/presentacion.interface';
 import { PresentacionFormComponent } from '../form/presentacion-form.component';
+import { Observable } from 'rxjs';
 
 @Component({
   selector: 'app-presentaciones-list',
@@ -21,7 +23,7 @@ import { PresentacionFormComponent } from '../form/presentacion-form.component';
   ],
   template: `
     <div class="page-header">
-      <h1>Presentaciones</h1>
+      <h1>{{ title }}</h1>
       <button mat-raised-button color="primary" (click)="openCreate()">
         <mat-icon>add</mat-icon> Nueva presentación
       </button>
@@ -35,7 +37,6 @@ import { PresentacionFormComponent } from '../form/presentacion-form.component';
             <th mat-header-cell *matHeaderCellDef>Nombre</th>
             <td mat-cell *matCellDef="let item">{{ item.nombre }}</td>
           </ng-container>
-
           <ng-container matColumnDef="estado">
             <th mat-header-cell *matHeaderCellDef>Estado</th>
             <td mat-cell *matCellDef="let item">
@@ -44,7 +45,6 @@ import { PresentacionFormComponent } from '../form/presentacion-form.component';
               </mat-chip>
             </td>
           </ng-container>
-
           <ng-container matColumnDef="acciones">
             <th mat-header-cell *matHeaderCellDef>Acciones</th>
             <td mat-cell *matCellDef="let item">
@@ -52,7 +52,6 @@ import { PresentacionFormComponent } from '../form/presentacion-form.component';
               <button mat-icon-button color="warn" (click)="delete(item)" matTooltip="Eliminar"><mat-icon>delete</mat-icon></button>
             </td>
           </ng-container>
-
           <tr mat-header-row *matHeaderRowDef="columns"></tr>
           <tr mat-row *matRowDef="let row; columns: columns"></tr>
           <tr class="mat-row" *matNoDataRow>
@@ -62,7 +61,6 @@ import { PresentacionFormComponent } from '../form/presentacion-form.component';
           </tr>
         </table>
         </div>
-
         <mat-paginator [length]="totalItems()" [pageSize]="pageSize()"
           [pageSizeOptions]="[5, 10, 25, 50]" (page)="onPage($event)">
         </mat-paginator>
@@ -77,47 +75,23 @@ import { PresentacionFormComponent } from '../form/presentacion-form.component';
     .empty-state mat-icon { font-size: 48px; width: 48px; height: 48px; margin-bottom: 12px; }
   `],
 })
-export default class PresentacionesListComponent implements OnInit {
-  private readonly service = inject(PresentacionService);
-  private readonly dialog = inject(MatDialog);
-  private readonly snackBar = inject(MatSnackBar);
-  readonly data = signal<Presentacion[]>([]);
-  readonly totalItems = signal(0);
-  readonly pageIndex = signal(0);
-  readonly pageSize = signal(10);
-  readonly columns = ['nombre', 'estado', 'acciones'];
+export default class PresentacionesListComponent extends BaseListComponent<Presentacion> {
+  override title = 'Presentaciones';
+  override entityName = 'presentaciones';
+  override formComponent = PresentacionFormComponent;
+  override dialogWidth = '450px';
+  override columns = ['nombre', 'estado', 'acciones'];
 
-  ngOnInit(): void { this.load(); }
-  private load(): void {
-    const page = this.pageIndex() + 1;
-    const limit = this.pageSize();
-    this.service.getAll(page, limit).subscribe({
-      next: (res) => {
-        this.data.set(res.data);
-        this.totalItems.set(res.total);
-      },
-      error: () => this.snackBar.open('Error al cargar presentaciones', 'Cerrar', { duration: 3000 }),
-    });
-  }
-  openCreate(): void {
-    const ref = this.dialog.open(PresentacionFormComponent, { width: '450px' });
-    ref.afterClosed().subscribe(r => { if (r) this.load(); });
-  }
-  openEdit(item: Presentacion): void {
-    const ref = this.dialog.open(PresentacionFormComponent, { width: '450px', data: item });
-    ref.afterClosed().subscribe(r => { if (r) this.load(); });
-  }
-  onPage(e: { pageIndex: number; pageSize: number }): void {
-    this.pageIndex.set(e.pageIndex);
-    this.pageSize.set(e.pageSize);
-    this.load();
+  private readonly presentacionService = inject(PresentacionService);
+
+  protected override loadService(page: number, limit: number): Observable<{ data: Presentacion[]; total: number }> {
+    return this.presentacionService.getAll(page, limit);
   }
 
-  delete(item: Presentacion): void {
-    if (!confirm(`¿Eliminar la presentación "${item.nombre}"?`)) return;
-    this.service.delete(item._id!).subscribe({
-      next: () => { this.snackBar.open('Presentación eliminada', 'Cerrar', { duration: 2000 }); this.load(); },
-      error: () => this.snackBar.open('Error al eliminar', 'Cerrar', { duration: 3000 }),
-    });
+  protected override deleteService(id: number | string): Observable<void> {
+    return this.presentacionService.delete(id as number);
   }
+
+  protected override getId(item: Presentacion): number | string { return item._id!; }
+  protected override getDisplayName(item: Presentacion): string { return item.nombre; }
 }

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
@@ -6,11 +6,13 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatDialogModule } from '@angular/material/dialog';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
+import { BaseListComponent } from '../../shared/components/base-list/base-list';
 import { SucursalService } from '../../core/services/sucursal.service';
 import { Sucursal } from '../../core/interfaces/sucursal.interface';
 import { SucursalesFormComponent } from '../form/sucursales-form.component';
+import { Observable } from 'rxjs';
 
 @Component({
   selector: 'app-sucursales-list',
@@ -21,8 +23,8 @@ import { SucursalesFormComponent } from '../form/sucursales-form.component';
   ],
   template: `
     <div class="page-header">
-      <h1>Sucursales</h1>
-      <button mat-raised-button color="primary" (click)="openForm()"><mat-icon>add</mat-icon> Nueva sucursal</button>
+      <h1>{{ title }}</h1>
+      <button mat-raised-button color="primary" (click)="openCreate()"><mat-icon>add</mat-icon> Nueva sucursal</button>
     </div>
     <mat-card>
       <mat-card-content>
@@ -53,7 +55,7 @@ import { SucursalesFormComponent } from '../form/sucursales-form.component';
           <ng-container matColumnDef="acciones">
             <th mat-header-cell *matHeaderCellDef></th>
             <td mat-cell *matCellDef="let item">
-              <button mat-icon-button (click)="openForm(item)"><mat-icon>edit</mat-icon></button>
+              <button mat-icon-button (click)="openEdit(item)"><mat-icon>edit</mat-icon></button>
             </td>
           </ng-container>
           <tr mat-header-row *matHeaderRowDef="columns"></tr>
@@ -63,7 +65,6 @@ import { SucursalesFormComponent } from '../form/sucursales-form.component';
           </tr>
         </table>
         </div>
-
         <mat-paginator [length]="totalItems()" [pageSize]="pageSize()"
           [pageSizeOptions]="[5, 10, 25, 50]" (page)="onPage($event)">
         </mat-paginator>
@@ -78,35 +79,23 @@ import { SucursalesFormComponent } from '../form/sucursales-form.component';
     .empty-state mat-icon { font-size: 48px; width: 48px; height: 48px; margin-bottom: 12px; }
   `],
 })
-export default class SucursalesListComponent implements OnInit {
-  private readonly service = inject(SucursalService);
-  private readonly snackBar = inject(MatSnackBar);
-  readonly data = signal<Sucursal[]>([]);
-  readonly totalItems = signal(0);
-  readonly pageIndex = signal(0);
-  readonly pageSize = signal(10);
-  private readonly dialog = inject(MatDialog);
-  readonly columns = ['nombre', 'direccion', 'telefono', 'principal', 'estado', 'acciones'];
-  ngOnInit(): void { this.load(); }
-  private load(): void {
-    const page = this.pageIndex() + 1;
-    const limit = this.pageSize();
-    this.service.getAll(page, limit).subscribe({
-      next: (r) => {
-        this.data.set(r.data);
-        this.totalItems.set(r.total);
-      },
-      error: () => this.snackBar.open('Error al cargar sucursales', 'Cerrar', { duration: 3000 }),
-    });
-  }
-  onPage(e: { pageIndex: number; pageSize: number }): void {
-    this.pageIndex.set(e.pageIndex);
-    this.pageSize.set(e.pageSize);
-    this.load();
+export default class SucursalesListComponent extends BaseListComponent<Sucursal> {
+  override title = 'Sucursales';
+  override entityName = 'sucursales';
+  override formComponent = SucursalesFormComponent;
+  override dialogWidth = '500px';
+  override columns = ['nombre', 'direccion', 'telefono', 'principal', 'estado', 'acciones'];
+
+  private readonly sucursalService = inject(SucursalService);
+
+  protected override loadService(page: number, limit: number): Observable<{ data: Sucursal[]; total: number }> {
+    return this.sucursalService.getAll(page, limit);
   }
 
-  openForm(sucursal?: Sucursal): void {
-    const ref = this.dialog.open(SucursalesFormComponent, { width: '500px', data: { sucursal: sucursal || null } });
-    ref.afterClosed().subscribe(r => { if (r) this.load(); });
+  protected override deleteService(id: number | string): Observable<void> {
+    return this.sucursalService.delete(id as number);
   }
+
+  protected override getId(item: Sucursal): number | string { return item._id!; }
+  protected override getDisplayName(item: Sucursal): string { return item.nombre; }
 }

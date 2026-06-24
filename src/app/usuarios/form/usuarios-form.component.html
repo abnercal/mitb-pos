@@ -1,0 +1,59 @@
+<h2 mat-dialog-title>{{ data.usuario ? 'Editar usuario' : 'Nuevo usuario' }}</h2>
+<mat-dialog-content>
+  <div class="form-grid">
+    <mat-form-field appearance="outline">
+      <mat-label>Nombre *</mat-label>
+      <input matInput [(ngModel)]="form.nombre" required>
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Apellido</mat-label>
+      <input matInput [(ngModel)]="form.apellido">
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Email *</mat-label>
+      <input matInput type="email" [(ngModel)]="form.email" required>
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Username</mat-label>
+      <input matInput [(ngModel)]="form.username">
+    </mat-form-field>
+
+    <!-- Password con ojo -->
+    <mat-form-field appearance="outline" class="password-field">
+      <mat-label>{{ data.usuario ? 'Nueva contraseña' : 'Contraseña *' }}</mat-label>
+      <input matInput [type]="showPassword() ? 'text' : 'password'" [(ngModel)]="form.password">
+      <button mat-icon-button matSuffix (click)="showPassword.set(!showPassword())" type="button" [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'">
+        <mat-icon>{{ showPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+      </button>
+      <mat-hint *ngIf="!data.usuario || form.password" [class.valid]="passwordValid">
+        Mín. 8 carac. — Al menos 1 mayúscula, 1 minúscula y 1 número
+      </mat-hint>
+    </mat-form-field>
+
+    <!-- Código empleado: auto-generado en crear, solo lectura en editar -->
+    <mat-form-field appearance="outline" *ngIf="data.usuario">
+      <mat-label>Código empleado</mat-label>
+      <input matInput [value]="data.usuario.codigoemp || ''" readonly>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Sucursal *</mat-label>
+      <mat-select [(ngModel)]="form.idsucursal" required>
+        <mat-option *ngFor="let s of sucursales()" [value]="s.idsucursal">{{ s.nombre }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Roles</mat-label>
+      <mat-select [(ngModel)]="form.roles" multiple>
+        <mat-option *ngFor="let r of roles()" [value]="r._id">{{ r.nombrerol }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+  </div>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close>Cancelar</button>
+  <button mat-raised-button color="primary" [disabled]="saving()" (click)="save()">
+    {{ saving() ? 'Guardando…' : 'Guardar' }}
+  </button>
+</mat-dialog-actions>

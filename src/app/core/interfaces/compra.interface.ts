@@ -26,5 +26,6 @@ export interface Compra {
   Sucursal?: { _id: number; nombre: string };
   Usuario?: { _id: number; nombre: string };
   Detalles?: CompraDetalle[];
+  detalles?: CompraDetalle[];
   createdAt?: string;
 }

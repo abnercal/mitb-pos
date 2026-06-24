@@ -1,7 +1,8 @@
 import { Component, OnInit, DestroyRef, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { interval } from 'rxjs';
+import { interval, merge, Subject, switchMap } from 'rxjs';
+import { startWith } from 'rxjs/operators';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
@@ -119,17 +120,19 @@ export default class DashboardComponent implements OnInit {
   readonly todaySales = signal(0);
   readonly recentSales = signal<Venta[]>([]);
 
+  private readonly refresh$ = new Subject<void>();
+
   ngOnInit(): void {
-    this.loadData();
+    const POLL_INTERVAL_MS = 30_000;
 
-    // Refrescar automático: evento interno + polling cada 30s como respaldo
-    this.appEvents.saleCompleted$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
-      this.loadData();
-    });
-
-    interval(30_000).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
-      this.loadData();
-    });
+    merge(
+      this.refresh$,
+      this.appEvents.saleCompleted$,
+      interval(POLL_INTERVAL_MS),
+    ).pipe(
+      startWith(undefined),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe(() => this.loadData());
   }
 
   private loadData(): void {
@@ -144,7 +147,6 @@ export default class DashboardComponent implements OnInit {
         const raw = v.fecha || v.createdAt;
         if (!raw) return false;
 
-        // Extraer YYYY-MM-DD del string que llegue y construir como fecha local
         const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
         if (!m) return false;
 
@@ -154,7 +156,6 @@ export default class DashboardComponent implements OnInit {
             && d.getDate() === today.getDate();
       });
 
-      // total viene como string del backend → convertir a número antes de sumar
       this.todaySales.set(hoy.reduce((sum, v) => sum + Number(v.total || 0), 0));
       this.recentSales.set(r.slice(0, 10));
     });

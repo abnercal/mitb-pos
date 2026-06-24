@@ -1,9 +1,11 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { Venta } from '../../core/interfaces/venta.interface';
+import { AuthService } from '../../core/services/auth.service';
+import { SucursalService } from '../../core/services/sucursal.service';
 
 @Component({
   selector: 'app-ticket-venta',
@@ -11,10 +13,9 @@ import { Venta } from '../../core/interfaces/venta.interface';
   imports: [CommonModule, MatDialogModule, MatButtonModule, MatIconModule],
   template: `
     <div class="print-wrapper">
-      <!-- Ticket Content -->
-      <div class="ticket" #ticketContent>
+      <div class="ticket">
         <div class="ticket-header">
-          <h1>MITB POS</h1>
+          <h1>{{ sucursalName() }}</h1>
           <p class="ticket-type">TICKET DE VENTA</p>
         </div>
 
@@ -67,7 +68,6 @@ import { Venta } from '../../core/interfaces/venta.interface';
         </div>
       </div>
 
-      <!-- Print Button -->
       <div class="print-actions no-print">
         <button mat-raised-button color="primary" (click)="imprimir()">
           <mat-icon>print</mat-icon> Imprimir
@@ -83,7 +83,7 @@ import { Venta } from '../../core/interfaces/venta.interface';
     .ticket {
       width: 80mm;
       margin: 0 auto;
-      padding: 16px 12px;
+      padding: 0;
       background: #fff;
       font-family: 'Courier New', monospace;
       font-size: 12px;
@@ -91,11 +91,12 @@ import { Venta } from '../../core/interfaces/venta.interface';
       color: #000;
     }
 
-    .ticket-header { text-align: center; margin-bottom: 8px; }
+    .ticket > * { padding: 0 12px; }
+    .ticket-header { text-align: center; padding-top: 8px; }
     .ticket-header h1 { margin: 0; font-size: 20px; font-weight: 800; }
     .ticket-type { margin: 4px 0 0; font-size: 14px; font-weight: 600; letter-spacing: 2px; }
 
-    .ticket-divider { border-top: 1px dashed #333; margin: 8px 0; }
+    .ticket-divider { border-top: 1px dashed #333; margin: 6px 12px; }
 
     .info-row { display: flex; justify-content: space-between; font-size: 11px; margin: 2px 0; }
     .info-row .label { color: #555; }
@@ -113,25 +114,64 @@ import { Venta } from '../../core/interfaces/venta.interface';
     .total-row { display: flex; justify-content: space-between; font-size: 16px; font-weight: 800; margin: 4px 0; }
     .total-row.final { font-size: 18px; border-top: 2px solid #000; border-bottom: 2px solid #000; padding: 6px 0; }
 
-    .ticket-footer { text-align: center; margin-top: 12px; }
+    .ticket-footer { text-align: center; margin-top: 8px; padding-bottom: 8px; }
     .ticket-footer p { margin: 2px 0; font-size: 12px; font-weight: 600; }
 
     @media print {
       .no-print { display: none !important; }
       .print-wrapper { position: static; }
       .ticket { width: auto; margin: 0; padding: 0; }
-      @page { margin: 0; size: 80mm auto; }
-      body { margin: 0; }
+      .ticket > * { padding: 0; }
+      .ticket-divider { margin: 6px 0; }
+      .ticket-header { padding-top: 2px; }
+
+      @page {
+        margin: 0;
+        size: 80mm auto;
+      }
+
+      html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        height: auto;
+        width: 80mm;
+      }
+
+      * {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
     }
 
     @media screen {
-      .ticket { box-shadow: 0 2px 12px rgba(0,0,0,.15); margin: 20px auto; }
+      .ticket { box-shadow: 0 2px 12px rgba(0,0,0,.15); margin: 20px auto; padding-top: 12px; }
     }
   `],
 })
-export class TicketVentaComponent {
+export class TicketVentaComponent implements OnInit {
   private readonly dialogRef = inject(MatDialogRef<TicketVentaComponent>);
+  private readonly authService = inject(AuthService);
+  private readonly sucursalService = inject(SucursalService);
   readonly venta = inject<Venta>(MAT_DIALOG_DATA);
+
+  readonly sucursalName = signal('MITB POS');
+
+  ngOnInit(): void {
+    // Intentar nombre desde la venta (si el backend lo devuelve)
+    if (this.venta.Sucursal?.nombre) {
+      this.sucursalName.set(this.venta.Sucursal.nombre);
+      return;
+    }
+
+    // Fallback: cargar desde la sucursal del usuario logueado
+    const session = this.authService.getSession();
+    const idSucursal = session?.user?.idsucursal;
+    if (idSucursal) {
+      this.sucursalService.getById(idSucursal).subscribe({
+        next: (s) => this.sucursalName.set(s.nombre),
+      });
+    }
+  }
 
   imprimir(): void {
     window.print();

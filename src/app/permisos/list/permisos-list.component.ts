@@ -1,27 +1,30 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatCardModule } from '@angular/material/card';
 import { MatPaginatorModule } from '@angular/material/paginator';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatCardModule } from '@angular/material/card';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatDialogModule } from '@angular/material/dialog';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
+import { BaseListComponent } from '../../shared/components/base-list/base-list';
 import { PermisoService } from '../../core/services/permiso.service';
 import { Permiso } from '../../core/interfaces/permiso.interface';
 import { PermisoFormComponent } from '../form/permiso-form.component';
+import { Observable } from 'rxjs';
 
 @Component({
   selector: 'app-permisos-list',
   standalone: true,
   imports: [
-    CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule,
-    MatPaginatorModule, MatDialogModule, MatSnackBarModule,
+    CommonModule, MatTableModule, MatButtonModule, MatIconModule,
+    MatPaginatorModule, MatCardModule, MatChipsModule, MatDialogModule, MatSnackBarModule,
   ],
   template: `
     <div class="page-header">
-      <h1>Permisos</h1>
-      <button mat-raised-button color="primary" (click)="openForm()">
+      <h1>{{ title }}</h1>
+      <button mat-raised-button color="primary" (click)="openCreate()">
         <mat-icon>add</mat-icon> Nuevo permiso
       </button>
     </div>
@@ -30,14 +33,14 @@ import { PermisoFormComponent } from '../form/permiso-form.component';
         <div class="table-responsive">
         <table mat-table [dataSource]="data()" class="full-table">
           <ng-container matColumnDef="nombre">
-            <th mat-header-cell *matHeaderCellDef>Permiso</th>
+            <th mat-header-cell *matHeaderCellDef>Nombre</th>
             <td mat-cell *matCellDef="let item">{{ item.nombre }}</td>
           </ng-container>
           <ng-container matColumnDef="acciones">
-            <th mat-header-cell *matHeaderCellDef></th>
+            <th mat-header-cell *matHeaderCellDef>Acciones</th>
             <td mat-cell *matCellDef="let item">
-              <button mat-icon-button (click)="openForm(item)" matTooltip="Editar"><mat-icon>edit</mat-icon></button>
-              <button mat-icon-button (click)="delete(item)" color="warn" matTooltip="Eliminar"><mat-icon>delete</mat-icon></button>
+              <button mat-icon-button color="primary" (click)="openEdit(item)" matTooltip="Editar"><mat-icon>edit</mat-icon></button>
+              <button mat-icon-button color="warn" (click)="delete(item)" matTooltip="Eliminar"><mat-icon>delete</mat-icon></button>
             </td>
           </ng-container>
           <tr mat-header-row *matHeaderRowDef="columns"></tr>
@@ -61,47 +64,23 @@ import { PermisoFormComponent } from '../form/permiso-form.component';
     .empty-state mat-icon { font-size: 48px; width: 48px; height: 48px; margin-bottom: 12px; }
   `],
 })
-export default class PermisosListComponent implements OnInit {
-  private readonly service = inject(PermisoService);
-  private readonly dialog = inject(MatDialog);
-  private readonly snackBar = inject(MatSnackBar);
+export default class PermisosListComponent extends BaseListComponent<Permiso> {
+  override title = 'Permisos';
+  override entityName = 'permisos';
+  override formComponent = PermisoFormComponent;
+  override dialogWidth = '450px';
+  override columns = ['nombre', 'acciones'];
 
-  readonly data = signal<Permiso[]>([]);
-  readonly totalItems = signal(0);
-  readonly pageIndex = signal(0);
-  readonly pageSize = signal(10);
-  readonly columns = ['nombre', 'acciones'];
+  private readonly permisoService = inject(PermisoService);
 
-  ngOnInit(): void { this.load(); }
-
-  private load(): void {
-    const page = this.pageIndex() + 1;
-    const limit = this.pageSize();
-    this.service.getAll(page, limit).subscribe({
-      next: (r) => {
-        this.data.set(r.data);
-        this.totalItems.set(r.total);
-      },
-      error: () => this.snackBar.open('Error al cargar permisos', 'Cerrar', { duration: 3000 }),
-    });
+  protected override loadService(page: number, limit: number): Observable<{ data: Permiso[]; total: number }> {
+    return this.permisoService.getAll(page, limit);
   }
 
-  onPage(e: { pageIndex: number; pageSize: number }): void {
-    this.pageIndex.set(e.pageIndex);
-    this.pageSize.set(e.pageSize);
-    this.load();
+  protected override deleteService(id: number | string): Observable<void> {
+    return this.permisoService.delete(id as number);
   }
 
-  openForm(permiso?: Permiso): void {
-    const ref = this.dialog.open(PermisoFormComponent, { width: '450px', data: permiso || null });
-    ref.afterClosed().subscribe(r => { if (r) this.load(); });
-  }
-
-  delete(p: Permiso): void {
-    if (!confirm(`¿Eliminar el permiso "${p.nombre}"?`)) return;
-    this.service.delete(p._id!).subscribe({
-      next: () => { this.snackBar.open('Permiso eliminado', 'Cerrar', { duration: 2000 }); this.load(); },
-      error: () => this.snackBar.open('Error al eliminar', 'Cerrar', { duration: 3000 }),
-    });
-  }
+  protected override getId(item: Permiso): number | string { return item._id!; }
+  protected override getDisplayName(item: Permiso): string { return item.nombre; }
 }
