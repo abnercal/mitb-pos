@@ -141,7 +141,7 @@ import { TipoClie } from '../../core/interfaces/cliente.interface';
         gap: 8px;
         font-size: 12px;
         font-weight: 600;
-        color: #666;
+        color: var(--mat-sys-on-surface-variant);
         text-transform: uppercase;
         padding: 0 4px;
         flex-wrap: wrap;

@@ -161,7 +161,7 @@ import { Observable } from 'rxjs';
         flex-direction: column;
         align-items: center;
         padding: 40px;
-        color: #999;
+        color: var(--mat-sys-on-surface-variant);
       }
       .empty-state mat-icon {
         font-size: 48px;

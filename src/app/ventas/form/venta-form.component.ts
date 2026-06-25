@@ -49,7 +49,7 @@ interface DetalleVenta {
     .detalle-row { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
     .full-table { width: 100%; margin: 8px 0; }
     .total-row { text-align: right; font-size: 18px; margin-top: 16px; padding: 12px; background: var(--mat-sys-surface-container); border-radius: 4px; }
-    .empty-detalle { text-align: center; padding: 20px; color: #999; }
+    .empty-detalle { text-align: center; padding: 20px; color: var(--mat-sys-on-surface-variant); }
   `],
 })
 export class VentaFormComponent implements OnInit {

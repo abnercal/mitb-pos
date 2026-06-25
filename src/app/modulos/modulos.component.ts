@@ -117,7 +117,7 @@ import { Permiso } from '../core/interfaces/permiso.interface';
       .empty-state {
         text-align: center;
         padding: 24px;
-        color: #999;
+        color: var(--mat-sys-on-surface-variant);
       }
       .empty-state mat-icon {
         font-size: 40px;

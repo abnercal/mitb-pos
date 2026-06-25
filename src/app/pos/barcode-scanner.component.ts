@@ -54,7 +54,7 @@ import { MatButtonModule } from '@angular/material/button';
         margin-top: 12px;
       }
       .scanner-hint {
-        color: #888;
+        color: var(--mat-sys-on-surface-variant);
         text-align: center;
         margin-top: 8px;
         font-size: 12px;

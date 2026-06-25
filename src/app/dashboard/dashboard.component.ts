@@ -122,7 +122,7 @@ import { Proveedor } from '../core/interfaces/proveedor.interface';
     .stat-card { display: flex; align-items: center; gap: 16px; padding: 20px; }
     .stat-card mat-icon { font-size: 40px; width: 40px; height: 40px; }
     .stat-info { display: flex; flex-direction: column; }
-    .stat-label { font-size: 13px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-label { font-size: 13px; color: var(--mat-sys-on-surface-variant); text-transform: uppercase; letter-spacing: 0.5px; }
     .stat-value { font-size: 24px; font-weight: 700; margin-top: 4px; }
     .sales mat-icon { color: var(--mat-sys-primary); }
     .count mat-icon { color: var(--mat-sys-tertiary); }
@@ -131,7 +131,7 @@ import { Proveedor } from '../core/interfaces/proveedor.interface';
     .table-card { margin-top: 8px; }
     .header-link { margin-left: auto; }
     .full-table { width: 100%; }
-    .empty-state { text-align: center; padding: 24px; color: #999; }
+    .empty-state { text-align: center; padding: 24px; color: var(--mat-sys-on-surface-variant); }
 
     .sk-cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
     .sk-card { display: flex; align-items: center; gap: 16px; padding: 20px; border-radius: 4px; background: var(--mat-sys-surface); }

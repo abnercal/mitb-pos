@@ -275,6 +275,25 @@ type FiltroEstado = 'todos' | 'bajo' | 'sin_stock' | 'normal';
         height: 64px;
         margin-bottom: 12px;
       }
+
+      /* Dark mode overrides para estados semánticos */
+      :host-context(:root.dark) .summary-item {
+        background: var(--mat-sys-tertiary-container);
+      }
+      :host-context(:root.dark) .summary-item.warn {
+        background: var(--mat-sys-error-container);
+      }
+      :host-context(:root.dark) .estado-badge.normal {
+        background: var(--mat-sys-tertiary-container);
+        color: var(--mat-sys-on-tertiary-container);
+      }
+      :host-context(:root.dark) .estado-badge.bajo {
+        background: var(--mat-sys-error-container);
+        color: var(--mat-sys-on-error-container);
+      }
+      :host-context(:root.dark) .row-bajo {
+        background: var(--mat-sys-surface-container-high);
+      }
     `,
   ],
 })

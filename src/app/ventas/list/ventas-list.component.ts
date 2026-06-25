@@ -113,7 +113,7 @@ import { catchError } from 'rxjs/operators';
     .page-header h1 { margin: 0; font-size: 24px; font-weight: 500; }
     .search-field { width: 100%; max-width: 400px; margin: 16px 0 0 16px; }
     .full-table { width: 100%; }
-    .empty-state { display: flex; flex-direction: column; align-items: center; padding: 40px; color: #999; }
+    .empty-state { display: flex; flex-direction: column; align-items: center; padding: 40px; color: var(--mat-sys-on-surface-variant); }
     .empty-state mat-icon { font-size: 48px; width: 48px; height: 48px; margin-bottom: 12px; }
   `],
 })
