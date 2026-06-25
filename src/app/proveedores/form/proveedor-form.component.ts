@@ -1,14 +1,15 @@
 import { Component, inject } from '@angular/core';
 
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { ReactiveFormsModule, Validators } from '@angular/forms';
+import { MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { ProveedorService } from '../../core/services/proveedor.service';
 import { Proveedor } from '../../core/interfaces/proveedor.interface';
+import { BaseFormComponent } from '../../shared/components/base-form';
 
 @Component({
   selector: 'app-proveedor-form',
@@ -111,14 +112,11 @@ import { Proveedor } from '../../core/interfaces/proveedor.interface';
     `,
   ],
 })
-export class ProveedorFormComponent {
-  private readonly fb = inject(FormBuilder);
-  private readonly service = inject(ProveedorService);
-  private readonly dialogRef = inject(MatDialogRef<ProveedorFormComponent>);
-  private readonly snackBar = inject(MatSnackBar);
-  protected readonly data: Proveedor | null = inject(MAT_DIALOG_DATA);
+export class ProveedorFormComponent extends BaseFormComponent<Proveedor> {
+  protected override crudService = inject(ProveedorService);
+  override entityName = 'Proveedor';
 
-  readonly form = this.fb.group({
+  override form = this.fb.group({
     nombre: [this.data?.nombre ?? '', Validators.required],
     nit: [this.data?.nit ?? ''],
     telefono: [this.data?.telefono ?? ''],
@@ -126,24 +124,4 @@ export class ProveedorFormComponent {
     direccion: [this.data?.direccion ?? ''],
     estado: [this.data?.estado ?? 1],
   });
-
-  submit(): void {
-    if (this.form.invalid) return;
-    const payload: Record<string, unknown> = {
-      ...this.form.value,
-      estado: this.form.get('estado')?.value ? 1 : 0,
-    };
-    const obs = this.data
-      ? this.service.update(this.data._id!, payload)
-      : this.service.create(payload);
-    obs.subscribe({
-      next: () => {
-        this.snackBar.open(`Proveedor ${this.data ? 'actualizado' : 'creado'}`, 'Cerrar', {
-          duration: 2000,
-        });
-        this.dialogRef.close(true);
-      },
-      error: () => this.snackBar.open('Error al guardar', 'Cerrar', { duration: 3000 }),
-    });
-  }
 }

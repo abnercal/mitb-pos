@@ -1,14 +1,15 @@
 import { Component, inject } from '@angular/core';
 
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { ReactiveFormsModule, Validators } from '@angular/forms';
+import { MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { UnidadService } from '../../core/services/unidad.service';
 import { Unidad } from '../../core/interfaces/unidad.interface';
+import { BaseFormComponent } from '../../shared/components/base-form';
 
 @Component({
   selector: 'app-unidad-form',
@@ -68,34 +69,14 @@ import { Unidad } from '../../core/interfaces/unidad.interface';
     `,
   ],
 })
-export class UnidadFormComponent {
-  private readonly fb = inject(FormBuilder);
-  private readonly service = inject(UnidadService);
-  private readonly dialogRef = inject(MatDialogRef<UnidadFormComponent>);
-  private readonly snackBar = inject(MatSnackBar);
-  protected readonly data: Unidad | null = inject(MAT_DIALOG_DATA);
-  readonly form = this.fb.group({
+export class UnidadFormComponent extends BaseFormComponent<Unidad> {
+  protected override crudService = inject(UnidadService);
+  override entityName = 'Unidad';
+  override entityGender: 'F' = 'F';
+
+  override form = this.fb.group({
     nombre: [this.data?.nombre ?? '', Validators.required],
     abreviatura: [this.data?.abreviatura ?? '', Validators.required],
     estado: [this.data?.estado ?? 1],
   });
-
-  submit(): void {
-    if (this.form.invalid) return;
-    const nombre = this.form.get('nombre')?.value ?? undefined;
-    const abreviatura = this.form.get('abreviatura')?.value ?? undefined;
-    const payload = { nombre, abreviatura, estado: this.form.get('estado')?.value ? 1 : 0 };
-    const obs = this.data
-      ? this.service.update(this.data._id!, payload)
-      : this.service.create(payload);
-    obs.subscribe({
-      next: () => {
-        this.snackBar.open(`Unidad ${this.data ? 'actualizada' : 'creada'}`, 'Cerrar', {
-          duration: 2000,
-        });
-        this.dialogRef.close(true);
-      },
-      error: () => this.snackBar.open('Error al guardar', 'Cerrar', { duration: 3000 }),
-    });
-  }
 }

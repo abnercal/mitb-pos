@@ -1,16 +1,17 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
 
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { ReactiveFormsModule, Validators } from '@angular/forms';
+import { MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { ClienteService } from '../../core/services/cliente.service';
 import { TipoClienteService } from '../../core/services/tipo-cliente.service';
 import { Cliente, TipoClie } from '../../core/interfaces/cliente.interface';
+import { BaseFormComponent } from '../../shared/components/base-form';
 
 @Component({
   selector: 'app-cliente-form',
@@ -46,17 +47,14 @@ import { Cliente, TipoClie } from '../../core/interfaces/cliente.interface';
     `,
   ],
 })
-export class ClienteFormComponent implements OnInit {
-  private readonly fb = inject(FormBuilder);
-  private readonly service = inject(ClienteService);
+export class ClienteFormComponent extends BaseFormComponent<Cliente> {
   private readonly tipoService = inject(TipoClienteService);
-  private readonly dialogRef = inject(MatDialogRef<ClienteFormComponent>);
-  private readonly snackBar = inject(MatSnackBar);
-  protected readonly data: Cliente | null = inject(MAT_DIALOG_DATA);
+  protected override crudService = inject(ClienteService);
+  override entityName = 'Cliente';
 
   tipos: TipoClie[] = [];
 
-  readonly form = this.fb.group({
+  override form = this.fb.group({
     nombres: [this.data?.nombres ?? '', Validators.required],
     apellidos: [this.data?.apellidos ?? ''],
     idtipoCli: [this.data?.idtipoCli ?? null, Validators.required],
@@ -67,38 +65,9 @@ export class ClienteFormComponent implements OnInit {
     estado: [this.data?.estado ?? 1],
   });
 
-  ngOnInit(): void {
+  override loadDependencies(): void {
     this.tipoService.getAll().subscribe({
-      next: (res) => {
-        this.tipos = res;
-      },
-    });
-  }
-
-  submit(): void {
-    if (this.form.invalid) return;
-    const v = this.form.getRawValue();
-    const payload = {
-      nombres: v.nombres ?? undefined,
-      apellidos: v.apellidos || '',
-      idtipoCli: v.idtipoCli ?? undefined,
-      nit: v.nit || '',
-      telefono: v.telefono || '',
-      email: v.email || '',
-      direccion: v.direccion || '',
-      estado: v.estado ? 1 : 0,
-    };
-    const obs = this.data
-      ? this.service.update(this.data._id!, payload)
-      : this.service.create(payload);
-    obs.subscribe({
-      next: () => {
-        this.snackBar.open(`Cliente ${this.data ? 'actualizado' : 'creado'}`, 'Cerrar', {
-          duration: 2000,
-        });
-        this.dialogRef.close(true);
-      },
-      error: () => this.snackBar.open('Error al guardar', 'Cerrar', { duration: 3000 }),
+      next: (res) => { this.tipos = res; },
     });
   }
 }

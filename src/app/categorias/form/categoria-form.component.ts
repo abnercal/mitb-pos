@@ -1,14 +1,15 @@
 import { Component, inject } from '@angular/core';
 
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { ReactiveFormsModule, Validators } from '@angular/forms';
+import { MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { CategoriaService } from '../../core/services/categoria.service';
 import { Categoria } from '../../core/interfaces/categoria.interface';
+import { BaseFormComponent } from '../../shared/components/base-form';
 
 @Component({
   selector: 'app-categoria-form',
@@ -67,35 +68,13 @@ import { Categoria } from '../../core/interfaces/categoria.interface';
     `,
   ],
 })
-export class CategoriaFormComponent {
-  private readonly fb = inject(FormBuilder);
-  private readonly service = inject(CategoriaService);
-  private readonly dialogRef = inject(MatDialogRef<CategoriaFormComponent>);
-  private readonly snackBar = inject(MatSnackBar);
-  protected readonly data: Categoria | null = inject(MAT_DIALOG_DATA);
+export class CategoriaFormComponent extends BaseFormComponent<Categoria> {
+  protected override crudService = inject(CategoriaService);
+  override entityName = 'Categoría';
+  override entityGender: 'F' = 'F';
 
-  readonly form = this.fb.group({
+  override form = this.fb.group({
     nombre: [this.data?.nombre ?? '', Validators.required],
     estado: [this.data?.estado ?? 1],
   });
-
-  submit(): void {
-    if (this.form.invalid) return;
-    const nombre = this.form.get('nombre')?.value ?? undefined;
-    const payload = { nombre, estado: this.form.get('estado')?.value ? 1 : 0 };
-
-    const obs = this.data
-      ? this.service.update(this.data._id!, payload)
-      : this.service.create(payload);
-
-    obs.subscribe({
-      next: () => {
-        this.snackBar.open(`Categoría ${this.data ? 'actualizada' : 'creada'}`, 'Cerrar', {
-          duration: 2000,
-        });
-        this.dialogRef.close(true);
-      },
-      error: () => this.snackBar.open('Error al guardar', 'Cerrar', { duration: 3000 }),
-    });
-  }
 }
