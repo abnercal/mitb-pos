@@ -3,50 +3,95 @@
   <div class="form-grid">
     <mat-form-field appearance="outline">
       <mat-label>Nombre *</mat-label>
-      <input matInput [(ngModel)]="form.nombre" required>
+      <input matInput [(ngModel)]="form.nombre" required />
     </mat-form-field>
     <mat-form-field appearance="outline">
       <mat-label>Apellido</mat-label>
-      <input matInput [(ngModel)]="form.apellido">
+      <input matInput [(ngModel)]="form.apellido" />
     </mat-form-field>
     <mat-form-field appearance="outline">
       <mat-label>Email *</mat-label>
-      <input matInput type="email" [(ngModel)]="form.email" required>
+      <input matInput type="email" [(ngModel)]="form.email" required />
     </mat-form-field>
     <mat-form-field appearance="outline">
       <mat-label>Username</mat-label>
-      <input matInput [(ngModel)]="form.username">
+      <input matInput [(ngModel)]="form.username" />
     </mat-form-field>
 
     <!-- Password con ojo -->
     <mat-form-field appearance="outline" class="password-field">
       <mat-label>{{ data.usuario ? 'Nueva contraseña' : 'Contraseña *' }}</mat-label>
-      <input matInput [type]="showPassword() ? 'text' : 'password'" [(ngModel)]="form.password">
-      <button mat-icon-button matSuffix (click)="showPassword.set(!showPassword())" type="button" [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'">
+      <input matInput [type]="showPassword() ? 'text' : 'password'" [(ngModel)]="form.password" />
+      <button
+        mat-icon-button
+        matSuffix
+        (click)="showPassword.set(!showPassword())"
+        type="button"
+        [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+      >
         <mat-icon>{{ showPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
       </button>
-      <mat-hint *ngIf="!data.usuario || form.password" [class.valid]="passwordValid">
-        Mín. 8 carac. — Al menos 1 mayúscula, 1 minúscula y 1 número
-      </mat-hint>
+      @if (!data.usuario || form.password) {
+        <mat-hint [class.valid]="passwordValid">
+          Mín. 8 carac. — Al menos 1 mayúscula, 1 minúscula y 1 número
+        </mat-hint>
+      }
     </mat-form-field>
 
     <!-- Código empleado: auto-generado en crear, solo lectura en editar -->
-    <mat-form-field appearance="outline" *ngIf="data.usuario">
-      <mat-label>Código empleado</mat-label>
-      <input matInput [value]="data.usuario.codigoemp || ''" readonly>
-    </mat-form-field>
+    @if (data.usuario) {
+      <mat-form-field appearance="outline">
+        <mat-label>Código empleado</mat-label>
+        <input matInput [value]="data.usuario.codigoemp || ''" readonly />
+      </mat-form-field>
+    }
 
     <mat-form-field appearance="outline">
       <mat-label>Sucursal *</mat-label>
       <mat-select [(ngModel)]="form.idsucursal" required>
-        <mat-option *ngFor="let s of sucursales()" [value]="s.idsucursal">{{ s.nombre }}</mat-option>
+        @for (s of sucursales(); track s) {
+          <mat-option [value]="s.idsucursal">{{ s.nombre }}</mat-option>
+        }
       </mat-select>
     </mat-form-field>
+
+    <!-- Imagen -->
+    <div class="image-field">
+      <div class="image-preview" (click)="galleryInput.click()" (keydown.enter)="galleryInput.click()" tabindex="0">
+        @if (previewUrl()) {
+          <img [src]="previewUrl()" alt="Foto de perfil" />
+        } @else {
+          <mat-icon>person</mat-icon>
+          <span>Foto de perfil</span>
+        }
+      </div>
+
+      <!-- Input oculto para galería -->
+      <input #galleryInput type="file" accept="image/*" hidden (change)="onFileSelected($event)" />
+
+      @if (!previewUrl()) {
+        <div class="image-actions">
+          <button mat-stroked-button type="button" (click)="galleryInput.click()">
+            <mat-icon>upload</mat-icon> Subir foto
+          </button>
+          <button mat-stroked-button type="button" (click)="openCamera()">
+            <mat-icon>camera_alt</mat-icon> Tomar foto
+          </button>
+        </div>
+      }
+      @if (previewUrl()) {
+        <button mat-stroked-button type="button" color="warn" (click)="removeImage()">
+          <mat-icon>delete</mat-icon> Eliminar foto
+        </button>
+      }
+    </div>
 
     <mat-form-field appearance="outline">
       <mat-label>Roles</mat-label>
       <mat-select [(ngModel)]="form.roles" multiple>
-        <mat-option *ngFor="let r of roles()" [value]="r._id">{{ r.nombrerol }}</mat-option>
+        @for (r of roles(); track r) {
+          <mat-option [value]="r._id">{{ r.nombrerol }}</mat-option>
+        }
       </mat-select>
     </mat-form-field>
   </div>

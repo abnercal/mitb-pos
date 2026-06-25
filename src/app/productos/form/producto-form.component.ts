@@ -1,8 +1,19 @@
 import { Component, OnInit, DestroyRef, inject, signal, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormsModule, ReactiveFormsModule, FormBuilder, Validators, FormArray } from '@angular/forms';
-import { MatDialog, MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import {
+  FormsModule,
+  ReactiveFormsModule,
+  FormBuilder,
+  Validators,
+  FormArray,
+} from '@angular/forms';
+import {
+  MatDialog,
+  MatDialogModule,
+  MatDialogRef,
+  MAT_DIALOG_DATA,
+} from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
@@ -22,6 +33,10 @@ import { PrecioService } from '../../core/services/precio.service';
 import { TipoClienteService } from '../../core/services/tipo-cliente.service';
 import { Precio } from '../../core/interfaces/precio.interface';
 import { Producto } from '../../core/interfaces/producto.interface';
+import {
+  PresentacionForm,
+  ProductoPresentacion,
+} from '../../core/interfaces/producto-presentacion.interface';
 import { Categoria } from '../../core/interfaces/categoria.interface';
 import { Marca } from '../../core/interfaces/marca.interface';
 import { Presentacion } from '../../core/interfaces/presentacion.interface';
@@ -32,58 +47,174 @@ import { TipoClie } from '../../core/interfaces/cliente.interface';
   selector: 'app-producto-form',
   standalone: true,
   imports: [
-    CommonModule, FormsModule, ReactiveFormsModule, MatDialogModule, MatFormFieldModule,
-    MatInputModule, MatSelectModule, MatButtonModule, MatSlideToggleModule,
-    MatIconModule, MatSnackBarModule, MatDatepickerModule, MatNativeDateModule,
+    FormsModule,
+    ReactiveFormsModule,
+    MatDialogModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    MatButtonModule,
+    MatSlideToggleModule,
+    MatIconModule,
+    MatSnackBarModule,
+    MatDatepickerModule,
+    MatNativeDateModule,
   ],
   templateUrl: './producto-form.component.html',
-  styles: [`
-    .full-width { width: 100%; margin-bottom: 16px; }
-    .form-row { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
-    .flex-1 { flex: 1; }
-    .toggle-row { margin: 16px 0; }
-    .section-title { display: flex; align-items: center; gap: 12px; margin: 20px 0 12px; font-size: 16px; font-weight: 500; }
-    .pres-grid { display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px; }
-    .pres-row {
-      display: grid;
-      grid-template-columns: 2fr 1fr 1fr 1.5fr auto;
-      gap: 8px;
-      align-items: start;
-    }
-    @media (max-width: 599px) {
+  styles: [
+    `
+      .full-width {
+        width: 100%;
+        margin-bottom: 16px;
+      }
+      .form-row {
+        display: flex;
+        gap: 16px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+      }
+      .flex-1 {
+        flex: 1;
+      }
+      .toggle-row {
+        margin: 16px 0;
+      }
+      .section-title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 20px 0 12px;
+        font-size: 16px;
+        font-weight: 500;
+      }
+      .pres-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
       .pres-row {
-        grid-template-columns: 1fr 1fr;
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr 1.5fr auto;
+        gap: 8px;
+        align-items: start;
       }
-      .pres-select { grid-column: 1 / -1; }
-      .pres-barcode { grid-column: 1; }
-      .pres-price { grid-column: 2; }
-      .pres-qty { grid-column: 1; }
-      .pres-row button[type="button"] {
-        grid-column: 2;
-        justify-self: end;
-        align-self: start;
-        margin-top: 4px;
+      @media (max-width: 599px) {
+        .pres-row {
+          grid-template-columns: 1fr 1fr;
+        }
+        .pres-select {
+          grid-column: 1 / -1;
+        }
+        .pres-barcode {
+          grid-column: 1;
+        }
+        .pres-price {
+          grid-column: 2;
+        }
+        .pres-qty {
+          grid-column: 1;
+        }
+        .pres-row button[type='button'] {
+          grid-column: 2;
+          justify-self: end;
+          align-self: start;
+          margin-top: 4px;
+        }
       }
-    }
-    .pres-empty { text-align: center; padding: 20px; background: #f5f5f5; border-radius: 8px; color: #999; font-size: 14px; }
-    .precios-table { display: flex; flex-direction: column; gap: 8px; margin: 8px 0; }
-    .precios-header { display: flex; gap: 8px; font-size: 12px; font-weight: 600; color: #666; text-transform: uppercase; padding: 0 4px; flex-wrap: wrap; }
-    .precios-header span { min-width: 100px; }
-    .precios-header span:nth-child(1) { flex: 2; min-width: 130px; }
-    .precios-header span:nth-child(2) { flex: 2; min-width: 140px; }
-    .precios-header span:nth-child(3) { flex: 1; min-width: 100px; }
-    .precios-header span:nth-child(4) { flex: 1; min-width: 110px; }
-    .precios-header span:nth-child(5) { flex: 2; min-width: 200px; }
-    .precios-header span:nth-child(6) { width: 40px; }
-    .precios-row { display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; }
-    .precios-row mat-form-field:nth-child(1) { flex: 2; min-width: 130px; }
-    .precios-row mat-form-field:nth-child(2) { flex: 2; min-width: 140px; }
-    .precios-row mat-form-field:nth-child(3) { flex: 1; min-width: 100px; }
-    .precios-row mat-form-field:nth-child(4) { flex: 1; min-width: 110px; }
-    .vigencia-fields { flex: 2; display: flex; gap: 4px; min-width: 200px; }
-    .vigencia-fields mat-form-field { flex: 1; }
-    .empty-precios { text-align: center; padding: 16px; background: #fafafa; border-radius: 8px; color: #888; font-size: 13px; border: 1px dashed #ddd; margin: 8px 0; }
-  `],
+      .pres-empty {
+        text-align: center;
+        padding: 20px;
+        background: var(--mat-sys-surface-container);
+        border-radius: 8px;
+        color: var(--mat-sys-on-surface-variant);
+        font-size: 14px;
+      }
+      .precios-table {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin: 8px 0;
+      }
+      .precios-header {
+        display: flex;
+        gap: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #666;
+        text-transform: uppercase;
+        padding: 0 4px;
+        flex-wrap: wrap;
+      }
+      .precios-header span {
+        min-width: 100px;
+      }
+      .precios-header span:nth-child(1) {
+        flex: 2;
+        min-width: 130px;
+      }
+      .precios-header span:nth-child(2) {
+        flex: 2;
+        min-width: 140px;
+      }
+      .precios-header span:nth-child(3) {
+        flex: 1;
+        min-width: 100px;
+      }
+      .precios-header span:nth-child(4) {
+        flex: 1;
+        min-width: 110px;
+      }
+      .precios-header span:nth-child(5) {
+        flex: 2;
+        min-width: 200px;
+      }
+      .precios-header span:nth-child(6) {
+        width: 40px;
+      }
+      .precios-row {
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+        flex-wrap: wrap;
+      }
+      .precios-row mat-form-field:nth-child(1) {
+        flex: 2;
+        min-width: 130px;
+      }
+      .precios-row mat-form-field:nth-child(2) {
+        flex: 2;
+        min-width: 140px;
+      }
+      .precios-row mat-form-field:nth-child(3) {
+        flex: 1;
+        min-width: 100px;
+      }
+      .precios-row mat-form-field:nth-child(4) {
+        flex: 1;
+        min-width: 110px;
+      }
+      .vigencia-fields {
+        flex: 2;
+        display: flex;
+        gap: 4px;
+        min-width: 200px;
+      }
+      .vigencia-fields mat-form-field {
+        flex: 1;
+      }
+      .empty-precios {
+        text-align: center;
+        padding: 16px;
+        background: var(--mat-sys-surface-container-low);
+        border-radius: 8px;
+        color: var(--mat-sys-on-surface-variant);
+        font-size: 13px;
+        border: 1px dashed var(--mat-sys-outline-variant);
+        margin: 8px 0;
+      }
+    `,
+  ],
 })
 export default class ProductoFormComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
@@ -121,7 +252,7 @@ export default class ProductoFormComponent implements OnInit {
       .map((c, i) => {
         const idpres = c.get('idpresentacion')?.value;
         if (!idpres) return null;
-        const pres = this.todasPresentaciones.find(p => p._id === idpres);
+        const pres = this.todasPresentaciones.find((p) => p._id === idpres);
         return {
           idprodPresenta: -(i + 1),
           Presentacion: pres ? { nombre: pres.nombre } : { nombre: `Presentación ${i + 1}` },
@@ -146,40 +277,43 @@ export default class ProductoFormComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.categoriaService.getAllList().subscribe(r => this.categorias = r);
-    this.marcaService.getAllList().subscribe(r => this.marcas = r);
-    this.presentacionService.getAllList().subscribe(r => {
+    this.categoriaService.getAllList().subscribe((r) => (this.categorias = r));
+    this.marcaService.getAllList().subscribe((r) => (this.marcas = r));
+    this.presentacionService.getAllList().subscribe((r) => {
       this.todasPresentaciones = r;
 
       // Si estamos editando, cargar presentaciones existentes
       if (this.data?.Presentaciones?.length) {
         for (const pp of this.data.Presentaciones) {
-          this.presentacionesArray.push(this.buildPresGroup({
-            idpresentacion: pp.idpresentacion,
-            cantidad_base: pp.cantidad_base,
-            precio_venta: pp.precio_venta,
-            codigo_barras: pp.codigo_barras ?? '',
-          }));
+          this.presentacionesArray.push(
+            this.buildPresGroup({
+              idpresentacion: pp.idpresentacion,
+              cantidad_base: pp.cantidad_base,
+              precio_venta: pp.precio_venta,
+              codigo_barras: pp.codigo_barras ?? '',
+            }),
+          );
         }
       }
     });
-    this.unidadService.getAllList().subscribe(r => this.unidades = r);
+    this.unidadService.getAllList().subscribe((r) => (this.unidades = r));
 
     // Cargar tipos de cliente
     this.tipoClienteService.getAll().subscribe({
-      next: r => this.tiposCliente = r,
-      error: () => this.snackBar.open('Error al cargar tipos de cliente', 'Cerrar', { duration: 3000 }),
+      next: (r) => (this.tiposCliente = r),
+      error: () =>
+        this.snackBar.open('Error al cargar tipos de cliente', 'Cerrar', { duration: 3000 }),
     });
 
     // Cargar presentaciones del producto (para edición o recién creado)
     if (this.data?.Presentaciones?.length) {
-      this.presentacionesProducto = this.data.Presentaciones.filter(pp => pp.estado !== 0);
+      this.presentacionesProducto = this.data.Presentaciones.filter((pp) => pp.estado !== 0);
     }
 
     // Si estamos editando, cargar precios existentes
     if (this.data?.codigoprod) {
       this.precioService.getByProducto(this.data.codigoprod).subscribe({
-        next: r => this.precios.set(r),
+        next: (r) => this.precios.set(r),
         error: () => this.precios.set([]),
       });
     }
@@ -187,7 +321,7 @@ export default class ProductoFormComponent implements OnInit {
     // Recalcular presOptions cada vez que cambien las presentaciones del form
     this.presentacionesArray.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.formVersion.update(v => v + 1));
+      .subscribe(() => this.formVersion.update((v) => v + 1));
   }
 
   /** Devuelve las presentaciones que NO están ya seleccionadas en otra fila */
@@ -208,27 +342,31 @@ export default class ProductoFormComponent implements OnInit {
 
   addPrecio(): void {
     const primeraPres = this.presOptions()[0];
-    this.precios.update(p => [...p, {
-      idprodPresenta: primeraPres?.idprodPresenta ?? 0,
-      idtipoCli: this.tiposCliente[0]?.idtipoCli ?? 0,
-      precio: 0,
-      tipoprecio: 'regular',
-      fechaefecto: undefined,
-      fechafin: undefined,
-    }]);
+    this.precios.update((p) => [
+      ...p,
+      {
+        idprodPresenta: primeraPres?.idprodPresenta ?? 0,
+        idtipoCli: this.tiposCliente[0]?.idtipoCli ?? 0,
+        precio: 0,
+        tipoprecio: 'regular',
+        fechaefecto: undefined,
+        fechafin: undefined,
+      },
+    ]);
   }
 
   removePrecio(index: number): void {
     const p = this.precios()[index];
     if (p.idprecios) this.preciosRemovidos.push(p.idprecios);
-    this.precios.update(items => items.filter((_, i) => i !== index));
+    this.precios.update((items) => items.filter((_, i) => i !== index));
   }
 
-  onPrecioChange(index: number): void {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onPrecioChange(_index: number): void {
     // Marcar como modificado - no necesita acción adicional, el objeto en la signal ya está mutado
   }
 
-  private buildPresGroup(data: any) {
+  private buildPresGroup(data: Partial<PresentacionForm>) {
     return this.fb.group({
       idpresentacion: [data.idpresentacion ?? null, Validators.required],
       cantidad_base: [data.cantidad_base ?? 1],
@@ -241,7 +379,7 @@ export default class ProductoFormComponent implements OnInit {
     if (this.form.invalid) return;
 
     const v = this.form.getRawValue();
-    const presentaciones = (v.presentaciones ?? []).map((p: any) => ({
+    const presentaciones = ((v['presentaciones'] ?? []) as PresentacionForm[]).map((p) => ({
       idpresentacion: p.idpresentacion,
       cantidad_base: Number(p.cantidad_base) || 1,
       precio_venta: Number(p.precio_venta) || 0,
@@ -253,7 +391,7 @@ export default class ProductoFormComponent implements OnInit {
       return;
     }
 
-    const payload: any = {
+    const payload: Record<string, unknown> = {
       nombre: v.nombre,
       descripcion: v.descripcion ?? '',
       idcategoria: v.idcategoria,
@@ -265,7 +403,7 @@ export default class ProductoFormComponent implements OnInit {
 
     // Solo enviar presentaciones si se modificaron (o es nuevo)
     if (presentaciones.length > 0 || !this.data) {
-      payload.presentaciones = presentaciones;
+      payload['presentaciones'] = presentaciones;
     }
 
     const obs = this.data
@@ -273,7 +411,7 @@ export default class ProductoFormComponent implements OnInit {
       : this.service.create(payload);
 
     obs.subscribe({
-      next: (productoGuardado: any) => {
+      next: (productoGuardado: Producto) => {
         const presGuardadas = productoGuardado?.Presentaciones || [];
 
         // Si es nuevo, actualizar presentacionesProducto con los IDs reales
@@ -282,7 +420,7 @@ export default class ProductoFormComponent implements OnInit {
         }
 
         // Persistir cambios en precios
-        const ops: Observable<any>[] = [];
+        const ops: Observable<unknown>[] = [];
 
         // Eliminar precios marcados
         for (const id of this.preciosRemovidos) {
@@ -291,13 +429,15 @@ export default class ProductoFormComponent implements OnInit {
 
         // Crear o actualizar precios
         for (const p of this.precios()) {
-          let idprodPresenta = p.idprodPresenta;
+          let idprodPresenta: number | undefined = p.idprodPresenta;
 
           // Para productos nuevos, mapear idprodPresenta temporal al real
           if (!this.data && presGuardadas.length && idprodPresenta < 0) {
             const idx = Math.abs(idprodPresenta) - 1;
             const idpres = this.presentacionesArray.controls[idx]?.get('idpresentacion')?.value;
-            const real = presGuardadas.find((pg: any) => pg.idpresentacion === idpres);
+            const real = presGuardadas.find(
+              (pg: ProductoPresentacion) => pg.idpresentacion === idpres,
+            );
             idprodPresenta = real?.idprodPresenta ?? presGuardadas[0]?.idprodPresenta;
           }
 
@@ -316,11 +456,14 @@ export default class ProductoFormComponent implements OnInit {
 
         if (ops.length) {
           forkJoin(ops).subscribe({
-            error: () => this.snackBar.open('Error al guardar precios', 'Cerrar', { duration: 3000 }),
+            error: () =>
+              this.snackBar.open('Error al guardar precios', 'Cerrar', { duration: 3000 }),
           });
         }
 
-        this.snackBar.open(`Producto ${this.data ? 'actualizado' : 'creado'}`, 'Cerrar', { duration: 2000 });
+        this.snackBar.open(`Producto ${this.data ? 'actualizado' : 'creado'}`, 'Cerrar', {
+          duration: 2000,
+        });
         this.dialogRef.close(true);
       },
       error: () => this.snackBar.open('Error al guardar', 'Cerrar', { duration: 3000 }),
@@ -333,7 +476,7 @@ export default class ProductoFormComponent implements OnInit {
       width: '500px',
       disableClose: true,
       data: {
-        onDetect: (_code: string) => Promise.resolve(true),
+        onDetect: () => Promise.resolve(true),
       },
     });
     ref.afterClosed().subscribe((code: string | null) => {

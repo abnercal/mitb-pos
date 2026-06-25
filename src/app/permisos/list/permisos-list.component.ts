@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -18,8 +18,14 @@ import { Observable } from 'rxjs';
   selector: 'app-permisos-list',
   standalone: true,
   imports: [
-    CommonModule, MatTableModule, MatButtonModule, MatIconModule,
-    MatPaginatorModule, MatCardModule, MatChipsModule, MatDialogModule, MatSnackBarModule,
+    MatTableModule,
+    MatButtonModule,
+    MatIconModule,
+    MatPaginatorModule,
+    MatCardModule,
+    MatChipsModule,
+    MatDialogModule,
+    MatSnackBarModule,
   ],
   template: `
     <div class="page-header">
@@ -31,38 +37,80 @@ import { Observable } from 'rxjs';
     <mat-card>
       <mat-card-content>
         <div class="table-responsive">
-        <table mat-table [dataSource]="data()" class="full-table">
-          <ng-container matColumnDef="nombre">
-            <th mat-header-cell *matHeaderCellDef>Nombre</th>
-            <td mat-cell *matCellDef="let item">{{ item.nombre }}</td>
-          </ng-container>
-          <ng-container matColumnDef="acciones">
-            <th mat-header-cell *matHeaderCellDef>Acciones</th>
-            <td mat-cell *matCellDef="let item">
-              <button mat-icon-button color="primary" (click)="openEdit(item)" matTooltip="Editar"><mat-icon>edit</mat-icon></button>
-              <button mat-icon-button color="warn" (click)="delete(item)" matTooltip="Eliminar"><mat-icon>delete</mat-icon></button>
-            </td>
-          </ng-container>
-          <tr mat-header-row *matHeaderRowDef="columns"></tr>
-          <tr mat-row *matRowDef="let row; columns: columns"></tr>
-          <tr class="mat-row" *matNoDataRow>
-            <td [attr.colspan]="columns.length"><div class="empty-state"><mat-icon>vpn_key</mat-icon><p>No hay permisos</p></div></td>
-          </tr>
-        </table>
+          <table mat-table [dataSource]="data()" class="full-table">
+            <ng-container matColumnDef="nombre">
+              <th mat-header-cell *matHeaderCellDef>Nombre</th>
+              <td mat-cell *matCellDef="let item">{{ item.nombre }}</td>
+            </ng-container>
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef>Acciones</th>
+              <td mat-cell *matCellDef="let item">
+                <button
+                  mat-icon-button
+                  color="primary"
+                  (click)="openEdit(item)"
+                  matTooltip="Editar"
+                >
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button mat-icon-button color="warn" (click)="delete(item)" matTooltip="Eliminar">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+            <tr mat-header-row *matHeaderRowDef="columns"></tr>
+            <tr mat-row *matRowDef="let row; columns: columns"></tr>
+            <tr class="mat-row" *matNoDataRow>
+              <td [attr.colspan]="columns.length">
+                <div class="empty-state">
+                  <mat-icon>vpn_key</mat-icon>
+                  <p>No hay permisos</p>
+                </div>
+              </td>
+            </tr>
+          </table>
         </div>
-        <mat-paginator [length]="totalItems()" [pageSize]="pageSize()"
-          [pageSizeOptions]="[5, 10, 25, 50]" (page)="onPage($event)">
+        <mat-paginator
+          [length]="totalItems()"
+          [pageSize]="pageSize()"
+          [pageSizeOptions]="[5, 10, 25, 50]"
+          (page)="onPage($event)"
+        >
         </mat-paginator>
       </mat-card-content>
     </mat-card>
   `,
-  styles: [`
-    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-    .page-header h1 { margin: 0; font-size: 24px; font-weight: 500; }
-    .full-table { width: 100%; }
-    .empty-state { display: flex; flex-direction: column; align-items: center; padding: 40px; color: #999; }
-    .empty-state mat-icon { font-size: 48px; width: 48px; height: 48px; margin-bottom: 12px; }
-  `],
+  styles: [
+    `
+      .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+      .page-header h1 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 500;
+      }
+      .full-table {
+        width: 100%;
+      }
+      .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 40px;
+        color: #999;
+      }
+      .empty-state mat-icon {
+        font-size: 48px;
+        width: 48px;
+        height: 48px;
+        margin-bottom: 12px;
+      }
+    `,
+  ],
 })
 export default class PermisosListComponent extends BaseListComponent<Permiso> {
   override title = 'Permisos';
@@ -73,7 +121,10 @@ export default class PermisosListComponent extends BaseListComponent<Permiso> {
 
   private readonly permisoService = inject(PermisoService);
 
-  protected override loadService(page: number, limit: number): Observable<{ data: Permiso[]; total: number }> {
+  protected override loadService(
+    page: number,
+    limit: number,
+  ): Observable<{ data: Permiso[]; total: number }> {
     return this.permisoService.getAll(page, limit);
   }
 
@@ -81,6 +132,10 @@ export default class PermisosListComponent extends BaseListComponent<Permiso> {
     return this.permisoService.delete(id as number);
   }
 
-  protected override getId(item: Permiso): number | string { return item._id!; }
-  protected override getDisplayName(item: Permiso): string { return item.nombre; }
+  protected override getId(item: Permiso): number | string {
+    return item._id!;
+  }
+  protected override getDisplayName(item: Permiso): string {
+    return item.nombre;
+  }
 }

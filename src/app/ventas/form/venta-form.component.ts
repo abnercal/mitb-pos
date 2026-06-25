@@ -1,6 +1,6 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormBuilder } from '@angular/forms';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -15,6 +15,8 @@ import { ProductoService } from '../../core/services/producto.service';
 import { AuthService } from '../../core/services/auth.service';
 import { Cliente } from '../../core/interfaces/cliente.interface';
 import { Producto } from '../../core/interfaces/producto.interface';
+
+const PENDING_VENTA_KEY = 'pending_venta_form';
 
 interface PresOption {
   idprodPresenta: number;
@@ -46,7 +48,7 @@ interface DetalleVenta {
     .flex-1 { flex: 1; } .flex-2 { flex: 2; }
     .detalle-row { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
     .full-table { width: 100%; margin: 8px 0; }
-    .total-row { text-align: right; font-size: 18px; margin-top: 16px; padding: 12px; background: #f5f5f5; border-radius: 4px; }
+    .total-row { text-align: right; font-size: 18px; margin-top: 16px; padding: 12px; background: var(--mat-sys-surface-container); border-radius: 4px; }
     .empty-detalle { text-align: center; padding: 20px; color: #999; }
   `],
 })
@@ -58,6 +60,9 @@ export class VentaFormComponent implements OnInit {
   private readonly dialogRef = inject(MatDialogRef<VentaFormComponent>);
   private readonly snackBar = inject(MatSnackBar);
   private readonly authService = inject(AuthService);
+
+  /** Si se cerró con submit (true) o sin submit (falsy) */
+  private submitted = false;
 
   clientes: Cliente[] = [];
   readonly productos = signal<Producto[]>([]);
@@ -98,6 +103,21 @@ export class VentaFormComponent implements OnInit {
     idcliente: [null as number | null],
   });
 
+  constructor() {
+    effect(() => {
+      // Auto-guardar detalles cuando cambian
+      const d = this.detalles();
+      if (d.length) {
+        localStorage.setItem(PENDING_VENTA_KEY, JSON.stringify({
+          detalles: d,
+          idcliente: this.form.get('idcliente')?.value ?? null,
+        }));
+      } else {
+        localStorage.removeItem(PENDING_VENTA_KEY);
+      }
+    });
+  }
+
   ngOnInit(): void {
     this.clienteService.getAllList().subscribe(r => this.clientes = r);
     this.productoService.getAllList().subscribe(r => this.productos.set(r));
@@ -106,6 +126,27 @@ export class VentaFormComponent implements OnInit {
     this.service.getNextCode().subscribe({
       next: (r) => this.nextCode.set(r.codigo),
       error: () => this.nextCode.set('Error al generar código'),
+    });
+
+    // Restaurar formulario pendiente
+    const raw = localStorage.getItem(PENDING_VENTA_KEY);
+    if (raw) {
+      try {
+        const saved = JSON.parse(raw);
+        if (saved.detalles?.length) {
+          this.detalles.set(saved.detalles);
+          if (saved.idcliente != null) this.form.patchValue({ idcliente: saved.idcliente });
+          this.snackBar.open(
+            `Formulario recuperado — ${saved.detalles.length} detalle${saved.detalles.length !== 1 ? 's' : ''}`,
+            'Cerrar', { duration: 4000 },
+          );
+        }
+      } catch { localStorage.removeItem(PENDING_VENTA_KEY); }
+    }
+
+    // Si cierran sin submit → limpiar
+    this.dialogRef.afterClosed().subscribe(() => {
+      if (!this.submitted) localStorage.removeItem(PENDING_VENTA_KEY);
     });
   }
 
@@ -151,8 +192,19 @@ export class VentaFormComponent implements OnInit {
       })),
       pago: { idtipopago: 3, importe: totalCalculado, estado: 'pagado' },
     }).subscribe({
-      next: () => { this.snackBar.open('Venta registrada', 'Cerrar', { duration: 2000 }); this.dialogRef.close(true); },
+      next: () => {
+        this.submitted = true;
+        localStorage.removeItem(PENDING_VENTA_KEY);
+        this.snackBar.open('Venta registrada', 'Cerrar', { duration: 2000 });
+        this.dialogRef.close(true);
+      },
       error: () => this.snackBar.open('Error al registrar venta', 'Cerrar', { duration: 3000 }),
     });
+  }
+
+  clearForm(): void {
+    this.detalles.set([]);
+    this.form.reset({ idcliente: null });
+    localStorage.removeItem(PENDING_VENTA_KEY);
   }
 }

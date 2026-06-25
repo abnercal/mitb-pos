@@ -11,13 +11,29 @@ html {
   box-sizing: inherit;
 }
 
-html {
+/* ─── Light theme (default) ──────────────────────────────────────────── */
+:root {
   @include mat.theme(
     (
       color: (
         primary: mat.$azure-palette,
         tertiary: mat.$blue-palette,
         theme-type: light,
+      ),
+      typography: Roboto,
+      density: 0,
+    )
+  );
+}
+
+/* ─── Dark theme ──────────────────────────────────────────────────────── */
+:root.dark {
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$azure-palette,
+        tertiary: mat.$blue-palette,
+        theme-type: dark,
       ),
       typography: Roboto,
       density: 0,
@@ -36,6 +52,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+:root.dark body {
+  color-scheme: dark;
+}
+
 /* Scrollbar styles */
 ::-webkit-scrollbar {
   width: 6px;
@@ -52,6 +72,14 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #999;
+}
+
+:root.dark ::-webkit-scrollbar-thumb {
+  background: #555;
+}
+
+:root.dark ::-webkit-scrollbar-thumb:hover {
+  background: #777;
 }
 
 /* ─── Responsive utilities ────────────────────────────────────────────── */

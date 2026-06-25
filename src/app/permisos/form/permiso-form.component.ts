@@ -1,5 +1,5 @@
-import { Component, Inject, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, inject } from '@angular/core';
+
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -13,8 +13,12 @@ import { Permiso } from '../../core/interfaces/permiso.interface';
   selector: 'app-permiso-form',
   standalone: true,
   imports: [
-    CommonModule, ReactiveFormsModule, MatDialogModule, MatFormFieldModule,
-    MatInputModule, MatButtonModule, MatSnackBarModule,
+    ReactiveFormsModule,
+    MatDialogModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatButtonModule,
+    MatSnackBarModule,
   ],
   template: `
     <h2 mat-dialog-title>{{ data ? 'Editar permiso' : 'Nuevo permiso' }}</h2>
@@ -22,8 +26,15 @@ import { Permiso } from '../../core/interfaces/permiso.interface';
       <mat-dialog-content>
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Nombre del permiso</mat-label>
-          <input matInput formControlName="nombre" placeholder="ej: reportes:inventario" autocomplete="off">
-          <mat-error *ngIf="form.get('nombre')?.hasError('required')">El nombre es requerido</mat-error>
+          <input
+            matInput
+            formControlName="nombre"
+            placeholder="ej: reportes:inventario"
+            autocomplete="off"
+          />
+          @if (form.get('nombre')?.hasError('required')) {
+            <mat-error>El nombre es requerido</mat-error>
+          }
         </mat-form-field>
       </mat-dialog-content>
       <mat-dialog-actions align="end">
@@ -34,7 +45,14 @@ import { Permiso } from '../../core/interfaces/permiso.interface';
       </mat-dialog-actions>
     </form>
   `,
-  styles: [`.full-width { width: 100%; margin-bottom: 16px; }`],
+  styles: [
+    `
+      .full-width {
+        width: 100%;
+        margin-bottom: 16px;
+      }
+    `,
+  ],
 })
 export class PermisoFormComponent {
   private readonly fb = inject(FormBuilder);
@@ -54,7 +72,9 @@ export class PermisoFormComponent {
       : this.service.create(payload);
     obs.subscribe({
       next: () => {
-        this.snackBar.open(`Permiso ${this.data ? 'actualizado' : 'creado'}`, 'Cerrar', { duration: 2000 });
+        this.snackBar.open(`Permiso ${this.data ? 'actualizado' : 'creado'}`, 'Cerrar', {
+          duration: 2000,
+        });
         this.dialogRef.close(true);
       },
       error: () => this.snackBar.open('Error al guardar', 'Cerrar', { duration: 3000 }),

@@ -1,4 +1,4 @@
-import { Directive, DestroyRef, inject, type OnInit, signal } from '@angular/core';
+import { Directive, DestroyRef, inject, type OnInit, signal, type Type } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { type Observable, of } from 'rxjs';
@@ -19,7 +19,7 @@ export abstract class BaseListComponent<T> implements OnInit {
 
   abstract title: string;
   abstract entityName: string;
-  abstract formComponent: any;
+  abstract formComponent: Type<unknown>;
   abstract dialogWidth: string;
   abstract columns: string[];
 

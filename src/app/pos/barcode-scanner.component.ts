@@ -1,40 +1,66 @@
 import { Component, OnInit, OnDestroy, inject, NgZone, ViewChild, ElementRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 
 @Component({
   selector: 'app-barcode-scanner',
   standalone: true,
-  imports: [CommonModule, MatDialogModule, MatButtonModule],
+  imports: [MatDialogModule, MatButtonModule],
   template: `
     <h2 mat-dialog-title>Escanear código</h2>
     <mat-dialog-content>
       <div #scannerContainer class="scanner-box"></div>
-      <p *ngIf="loading" class="scanner-loading">{{ loadingText }}</p>
-      <p *ngIf="error" class="scanner-error">{{ error }}</p>
-      <p *ngIf="!loading && !error && hintText" class="scanner-hint">{{ hintText }}</p>
+      @if (loading) {
+        <p class="scanner-loading">{{ loadingText }}</p>
+      }
+      @if (error) {
+        <p class="scanner-error">{{ error }}</p>
+      }
+      @if (!loading && !error && hintText) {
+        <p class="scanner-hint">{{ hintText }}</p>
+      }
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button (click)="cancel()">Cancelar</button>
     </mat-dialog-actions>
   `,
-  styles: [`
-    .scanner-box {
-      width: 100%; min-height: 300px; position: relative;
-      overflow: hidden; border-radius: 8px; background: #000;
-    }
-    .scanner-box video {
-      width: 100%; height: 100%; object-fit: cover;
-      display: block;
-    }
-    .scanner-loading {
-      display: flex; align-items: center; justify-content: center;
-      color: #fff; margin-top: 12px;
-    }
-    .scanner-error { color: #e53935; text-align: center; margin-top: 12px; }
-    .scanner-hint { color: #888; text-align: center; margin-top: 8px; font-size: 12px; }
-  `],
+  styles: [
+    `
+      .scanner-box {
+        width: 100%;
+        min-height: 300px;
+        position: relative;
+        overflow: hidden;
+        border-radius: 8px;
+        background: #000;
+      }
+      .scanner-box video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+      .scanner-loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        margin-top: 12px;
+      }
+      .scanner-error {
+        color: var(--mat-sys-error);
+        text-align: center;
+        margin-top: 12px;
+      }
+      .scanner-hint {
+        color: #888;
+        text-align: center;
+        margin-top: 8px;
+        font-size: 12px;
+      }
+    `,
+  ],
 })
 export class BarcodeScannerComponent implements OnInit, OnDestroy {
   @ViewChild('scannerContainer', { static: true }) container!: ElementRef;
@@ -86,9 +112,15 @@ export class BarcodeScannerComponent implements OnInit, OnDestroy {
         },
         decoder: {
           readers: [
-            'ean_reader', 'ean_8_reader', 'code_128_reader',
-            'code_39_reader', 'codabar_reader', 'upc_reader',
-            'upc_e_reader', 'i2of5_reader', 'code_93_reader',
+            'ean_reader',
+            'ean_8_reader',
+            'code_128_reader',
+            'code_39_reader',
+            'codabar_reader',
+            'upc_reader',
+            'upc_e_reader',
+            'i2of5_reader',
+            'code_93_reader',
           ],
         },
         locate: true,
@@ -97,7 +129,9 @@ export class BarcodeScannerComponent implements OnInit, OnDestroy {
       if (this.destroyed) return;
 
       // Ignorar detecciones por 1.5s para dar tiempo a enfocar
-      this.ngZone.run(() => { this.hintText = 'Enfocando…'; });
+      this.ngZone.run(() => {
+        this.hintText = 'Enfocando…';
+      });
 
       Quagga.onDetected((result) => {
         if (this.destroyed || !this.ready) return;
@@ -110,16 +144,21 @@ export class BarcodeScannerComponent implements OnInit, OnDestroy {
 
       Quagga.start();
 
-      this.ngZone.run(() => { this.loading = false; this.loadingText = ''; });
+      this.ngZone.run(() => {
+        this.loading = false;
+        this.loadingText = '';
+      });
 
       setTimeout(() => {
         if (!this.destroyed) {
           this.ready = true;
-          this.ngZone.run(() => { this.hintText = 'Enfocá un código de barras o QR'; });
+          this.ngZone.run(() => {
+            this.hintText = 'Enfocá un código de barras o QR';
+          });
         }
       }, 1500);
-    } catch (err: any) {
-      const msg = err?.message || err?.toString() || '';
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
       this.ngZone.run(() => {
         this.loading = false;
         if (msg.includes('NotAllowedError')) {
@@ -138,13 +177,19 @@ export class BarcodeScannerComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroyed = true;
     // Si Quagga no llegó a estar listo, no intentamos detenerlo
-    import('@ericblade/quagga2').then((m) => {
-      try {
-        m.default.offDetected();
-        m.default.offProcessed();
-        m.default.stop();
-      } catch { /* ya fue liberado */ }
-    }).catch(() => {});
+    import('@ericblade/quagga2')
+      .then((m) => {
+        try {
+          m.default.offDetected();
+          m.default.offProcessed();
+          m.default.stop();
+        } catch {
+          /* ya fue liberado */
+        }
+      })
+      .catch(() => {
+        /* promesa iniciada por onDetect, error ignorado */
+      });
   }
 
   cancel(): void {

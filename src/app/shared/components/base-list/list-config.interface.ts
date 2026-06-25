@@ -14,13 +14,13 @@ export interface DeleteState {
   id: number | string;
 }
 
-export interface ListConfig<T, TCreate = Partial<T>> {
+export interface ListConfig<T> {
   title: string;
   createLabel: string;
   emptyIcon: string;
   emptyMessage: string;
   dialogWidth: string;
-  formComponent: Type<any>;
+  formComponent: Type<unknown>;
   service: {
     getAll: (page: number, limit: number, search?: string) => Observable<{ data: T[]; total: number }>;
     delete: (id: number | string) => Observable<void>;

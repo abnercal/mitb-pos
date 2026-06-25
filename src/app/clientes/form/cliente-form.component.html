@@ -4,13 +4,18 @@
     <div class="form-row">
       <mat-form-field appearance="fill" class="flex-1">
         <mat-label>Nombres *</mat-label>
-        <input matInput formControlName="nombres" placeholder="Nombres del cliente" autocomplete="off">
+        <input
+          matInput
+          formControlName="nombres"
+          placeholder="Nombres del cliente"
+          autocomplete="off"
+        />
         <mat-error>Los nombres son requeridos</mat-error>
       </mat-form-field>
 
       <mat-form-field appearance="fill" class="flex-1">
         <mat-label>Apellidos</mat-label>
-        <input matInput formControlName="apellidos" placeholder="Apellidos" autocomplete="off">
+        <input matInput formControlName="apellidos" placeholder="Apellidos" autocomplete="off" />
       </mat-form-field>
     </div>
 
@@ -18,32 +23,45 @@
       <mat-form-field appearance="fill" class="flex-1">
         <mat-label>Tipo de cliente *</mat-label>
         <mat-select formControlName="idtipoCli">
-          <mat-option *ngFor="let t of tipos" [value]="t.idtipoCli">{{ t.nombre }}</mat-option>
+          @for (t of tipos; track t) {
+            <mat-option [value]="t.idtipoCli">{{ t.nombre }}</mat-option>
+          }
         </mat-select>
         <mat-error>El tipo es requerido</mat-error>
       </mat-form-field>
 
       <mat-form-field appearance="fill" class="flex-1">
         <mat-label>NIT</mat-label>
-        <input matInput formControlName="nit" placeholder="NIT" autocomplete="off">
+        <input matInput formControlName="nit" placeholder="NIT" autocomplete="off" />
       </mat-form-field>
     </div>
 
     <div class="form-row">
       <mat-form-field appearance="fill" class="flex-1">
         <mat-label>Teléfono</mat-label>
-        <input matInput formControlName="telefono" placeholder="Ej: 1234-5678" autocomplete="off">
+        <input matInput formControlName="telefono" placeholder="Ej: 1234-5678" autocomplete="off" />
       </mat-form-field>
 
       <mat-form-field appearance="fill" class="flex-1">
         <mat-label>Email</mat-label>
-        <input matInput formControlName="email" placeholder="correo@ejemplo.com" autocomplete="off" type="email">
+        <input
+          matInput
+          formControlName="email"
+          placeholder="correo@ejemplo.com"
+          autocomplete="off"
+          type="email"
+        />
       </mat-form-field>
     </div>
 
     <mat-form-field appearance="fill" class="full-width">
       <mat-label>Dirección</mat-label>
-      <input matInput formControlName="direccion" placeholder="Dirección del cliente" autocomplete="off">
+      <input
+        matInput
+        formControlName="direccion"
+        placeholder="Dirección del cliente"
+        autocomplete="off"
+      />
     </mat-form-field>
 
     <div class="toggle-row">

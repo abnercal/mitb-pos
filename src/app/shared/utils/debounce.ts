@@ -1,4 +1,4 @@
-import { DestroyRef, inject, signal, type Signal } from '@angular/core';
+import { DestroyRef, signal, type Signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 

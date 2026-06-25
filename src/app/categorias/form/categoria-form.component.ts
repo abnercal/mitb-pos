@@ -1,5 +1,5 @@
-import { Component, Inject, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, inject } from '@angular/core';
+
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -14,7 +14,6 @@ import { Categoria } from '../../core/interfaces/categoria.interface';
   selector: 'app-categoria-form',
   standalone: true,
   imports: [
-    CommonModule,
     ReactiveFormsModule,
     MatDialogModule,
     MatFormFieldModule,
@@ -30,8 +29,15 @@ import { Categoria } from '../../core/interfaces/categoria.interface';
       <mat-dialog-content>
         <mat-form-field appearance="fill" class="full-width">
           <mat-label>Nombre</mat-label>
-          <input matInput formControlName="nombre" placeholder="Nombre de la categoría" autocomplete="off">
-          <mat-error *ngIf="form.get('nombre')?.hasError('required')">El nombre es requerido</mat-error>
+          <input
+            matInput
+            formControlName="nombre"
+            placeholder="Nombre de la categoría"
+            autocomplete="off"
+          />
+          @if (form.get('nombre')?.hasError('required')) {
+            <mat-error>El nombre es requerido</mat-error>
+          }
         </mat-form-field>
 
         <div class="toggle-row">
@@ -49,10 +55,17 @@ import { Categoria } from '../../core/interfaces/categoria.interface';
       </mat-dialog-actions>
     </form>
   `,
-  styles: [`
-    .full-width { width: 100%; margin-bottom: 16px; }
-    .toggle-row { margin: 16px 0; }
-  `],
+  styles: [
+    `
+      .full-width {
+        width: 100%;
+        margin-bottom: 16px;
+      }
+      .toggle-row {
+        margin: 16px 0;
+      }
+    `,
+  ],
 })
 export class CategoriaFormComponent {
   private readonly fb = inject(FormBuilder);
@@ -77,7 +90,9 @@ export class CategoriaFormComponent {
 
     obs.subscribe({
       next: () => {
-        this.snackBar.open(`Categoría ${this.data ? 'actualizada' : 'creada'}`, 'Cerrar', { duration: 2000 });
+        this.snackBar.open(`Categoría ${this.data ? 'actualizada' : 'creada'}`, 'Cerrar', {
+          duration: 2000,
+        });
         this.dialogRef.close(true);
       },
       error: () => this.snackBar.open('Error al guardar', 'Cerrar', { duration: 3000 }),

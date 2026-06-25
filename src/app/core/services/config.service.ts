@@ -12,8 +12,6 @@ export interface AppConfig {
   companyAddress: string;
   companyPhone: string;
   companyEmail: string;
-  primaryColor: string;
-  accentColor: string;
 }
 
 const DEFAULT_CONFIG: AppConfig = {
@@ -28,8 +26,6 @@ const DEFAULT_CONFIG: AppConfig = {
   companyAddress: 'Dirección',
   companyPhone: '00000000',
   companyEmail: 'info@miempresa.com',
-  primaryColor: '#1565c0',
-  accentColor: '#ff8f00',
 };
 
 @Injectable({ providedIn: 'root' })

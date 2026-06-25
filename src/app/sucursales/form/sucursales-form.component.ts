@@ -1,5 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { MatDialogModule, MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -11,34 +11,50 @@ import { Sucursal } from '../../core/interfaces/sucursal.interface';
 @Component({
   selector: 'app-sucursales-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatDialogModule, MatButtonModule, MatInputModule, MatSnackBarModule],
+  imports: [FormsModule, MatDialogModule, MatButtonModule, MatInputModule, MatSnackBarModule],
   template: `
     <h2 mat-dialog-title>{{ data ? 'Editar sucursal' : 'Nueva sucursal' }}</h2>
     <mat-dialog-content>
       <div class="form-grid">
         <mat-form-field appearance="outline">
           <mat-label>Nombre *</mat-label>
-          <input matInput [(ngModel)]="form.nombre" required>
+          <input matInput [(ngModel)]="form.nombre" required />
         </mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>Teléfono</mat-label>
-          <input matInput [(ngModel)]="form.telefono">
+          <input matInput [(ngModel)]="form.telefono" />
         </mat-form-field>
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Dirección</mat-label>
-          <input matInput [(ngModel)]="form.direccion">
+          <input matInput [(ngModel)]="form.direccion" />
         </mat-form-field>
       </div>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button mat-dialog-close>Cancelar</button>
-      <button mat-raised-button color="primary" [disabled]="saving() || !form.nombre" (click)="save()">
+      <button
+        mat-raised-button
+        color="primary"
+        [disabled]="saving() || !form.nombre"
+        (click)="save()"
+      >
         {{ saving() ? 'Guardando…' : 'Guardar' }}
       </button>
     </mat-dialog-actions>
   `,
-  styles: [`.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-top: 12px; }
-    .full-width { grid-column: 1 / -1; }`],
+  styles: [
+    `
+      .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        padding-top: 12px;
+      }
+      .full-width {
+        grid-column: 1 / -1;
+      }
+    `,
+  ],
 })
 export class SucursalesFormComponent implements OnInit {
   private readonly service = inject(SucursalService);
@@ -65,10 +81,15 @@ export class SucursalesFormComponent implements OnInit {
       : this.service.create(this.form);
     obs.subscribe({
       next: () => {
-        this.snackBar.open(this.data ? 'Sucursal actualizada' : 'Sucursal creada', 'Cerrar', { duration: 2000 });
+        this.snackBar.open(this.data ? 'Sucursal actualizada' : 'Sucursal creada', 'Cerrar', {
+          duration: 2000,
+        });
         this.dialogRef.close(true);
       },
-      error: () => { this.snackBar.open('Error al guardar', 'Cerrar', { duration: 3000 }); this.saving.set(false); },
+      error: () => {
+        this.snackBar.open('Error al guardar', 'Cerrar', { duration: 3000 });
+        this.saving.set(false);
+      },
     });
   }
 }

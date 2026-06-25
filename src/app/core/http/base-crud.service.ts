@@ -16,7 +16,7 @@ export abstract class BaseCrudService<T> {
   getAll(page = 1, limit = 20, search = ''): Observable<{ data: T[]; total: number }> {
     const params = `?page=${page}&limit=${limit}${search ? `&search=${encodeURIComponent(search)}` : ''}`;
     return this.http.get<ApiResponse<T[]>>(`${this.apiUrl}${params}`).pipe(
-      map(r => ({ data: r.data, total: r.meta?.total ?? r.data.length })),
+      map(r => ({ data: r.data, total: (r.meta as { total?: number })?.total ?? r.data.length })),
     );
   }
 

@@ -7,7 +7,7 @@ import { type Observable } from 'rxjs';
 @Directive()
 export abstract class BaseFormComponent<T> implements OnInit {
   protected readonly fb = inject(FormBuilder);
-  protected readonly dialogRef = inject(MatDialogRef<any>);
+  protected readonly dialogRef = inject(MatDialogRef<unknown>);
   protected readonly snackBar = inject(MatSnackBar);
   protected readonly destroyRef = inject(DestroyRef);
 

@@ -1,6 +1,6 @@
-export interface ApiResponse<T> {
+export interface ApiResponse<T, M = unknown> {
   ok: boolean;
   message: string;
   data: T;
-  meta: any;
+  meta: M;
 }

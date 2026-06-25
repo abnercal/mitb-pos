@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -14,7 +14,6 @@ import { AuthService } from '../../core/services/auth.service';
   selector: 'app-login',
   standalone: true,
   imports: [
-    CommonModule,
     FormsModule,
     MatCardModule,
     MatFormFieldModule,
@@ -66,16 +65,16 @@ import { AuthService } from '../../core/services/auth.service';
                 matSuffix
                 (click)="hidePassword = !hidePassword"
               >
-                <mat-icon>{{
-                  hidePassword ? 'visibility_off' : 'visibility'
-                }}</mat-icon>
+                <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
               </button>
             </mat-form-field>
 
-            <div *ngIf="error" class="error-message">
-              <mat-icon>error</mat-icon>
-              <span>{{ error }}</span>
-            </div>
+            @if (error) {
+              <div class="error-message">
+                <mat-icon>error</mat-icon>
+                <span>{{ error }}</span>
+              </div>
+            }
 
             <button
               mat-raised-button
@@ -84,8 +83,12 @@ import { AuthService } from '../../core/services/auth.service';
               class="full-width login-btn"
               [disabled]="loading"
             >
-              <mat-spinner *ngIf="loading" diameter="20" class="btn-spinner"></mat-spinner>
-              <span *ngIf="!loading">Ingresar</span>
+              @if (loading) {
+                <mat-spinner diameter="20" class="btn-spinner"></mat-spinner>
+              }
+              @if (!loading) {
+                <span>Ingresar</span>
+              }
             </button>
           </form>
         </mat-card-content>
@@ -99,7 +102,7 @@ import { AuthService } from '../../core/services/auth.service';
         align-items: center;
         justify-content: center;
         min-height: 100vh;
-        background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
+        background: var(--mat-sys-primary);
         padding: 16px;
       }
 
@@ -116,9 +119,7 @@ import { AuthService } from '../../core/services/auth.service';
       }
 
       .brand-text {
-        background: linear-gradient(135deg, #1565c0, #1976d2);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        color: var(--mat-sys-primary);
         font-weight: 700;
       }
 
@@ -149,8 +150,8 @@ import { AuthService } from '../../core/services/auth.service';
         display: flex;
         align-items: center;
         gap: 8px;
-        color: #f44336;
-        background: #ffebee;
+        color: var(--mat-sys-error);
+        background: var(--mat-sys-error-container);
         padding: 8px 12px;
         border-radius: 4px;
         font-size: 14px;
@@ -188,8 +189,7 @@ export default class LoginComponent {
       },
       error: (err) => {
         this.loading = false;
-        this.error =
-          err.error?.message || 'Error al iniciar sesión. Verificá tus credenciales.';
+        this.error = err.error?.message || 'Error al iniciar sesión. Verificá tus credenciales.';
       },
     });
   }

@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -7,14 +7,15 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { ConfigService, AppConfig } from '../core/services/config.service';
+import { ThemeService } from '../core/services/theme.service';
 
 @Component({
   selector: 'app-config',
   standalone: true,
   imports: [
-    CommonModule,
     FormsModule,
     MatCardModule,
     MatFormFieldModule,
@@ -22,6 +23,7 @@ import { ConfigService, AppConfig } from '../core/services/config.service';
     MatButtonModule,
     MatIconModule,
     MatDividerModule,
+    MatSlideToggleModule,
     MatSnackBarModule,
   ],
   template: `
@@ -89,12 +91,7 @@ import { ConfigService, AppConfig } from '../core/services/config.service';
 
             <mat-form-field appearance="outline">
               <mat-label>Tasa de impuesto (%)</mat-label>
-              <input
-                matInput
-                type="number"
-                [(ngModel)]="taxPercent"
-                placeholder="12"
-              />
+              <input matInput type="number" [(ngModel)]="taxPercent" placeholder="12" />
             </mat-form-field>
           </div>
         </mat-card-content>
@@ -104,19 +101,19 @@ import { ConfigService, AppConfig } from '../core/services/config.service';
         <mat-card-header>
           <mat-icon mat-card-avatar>palette</mat-icon>
           <mat-card-title>Apariencia</mat-card-title>
-          <mat-card-subtitle>Colores del sistema</mat-card-subtitle>
+          <mat-card-subtitle>Tema del sistema</mat-card-subtitle>
         </mat-card-header>
         <mat-card-content>
-          <div class="config-grid">
-            <mat-form-field appearance="outline">
-              <mat-label>Color primario</mat-label>
-              <input matInput [(ngModel)]="form.primaryColor" type="color" class="color-input" />
-            </mat-form-field>
-
-            <mat-form-field appearance="outline">
-              <mat-label>Color secundario</mat-label>
-              <input matInput [(ngModel)]="form.accentColor" type="color" class="color-input" />
-            </mat-form-field>
+          <div class="theme-toggle">
+            <mat-slide-toggle
+              [checked]="theme.current() === 'dark'"
+              (toggleChange)="theme.toggle()"
+            >
+              <div class="toggle-label">
+                <mat-icon>{{ theme.current() === 'dark' ? 'dark_mode' : 'light_mode' }}</mat-icon>
+                {{ theme.current() === 'dark' ? 'Oscuro' : 'Claro' }}
+              </div>
+            </mat-slide-toggle>
           </div>
         </mat-card-content>
       </mat-card>
@@ -144,7 +141,7 @@ import { ConfigService, AppConfig } from '../core/services/config.service';
         font-size: 24px;
         font-weight: 500;
         margin-bottom: 24px;
-        color: #333;
+        color: var(--mat-sys-on-surface);
       }
 
       mat-card {
@@ -162,10 +159,19 @@ import { ConfigService, AppConfig } from '../core/services/config.service';
         grid-column: 1 / -1;
       }
 
-      .color-input {
-        padding: 4px !important;
-        height: 40px;
-        cursor: pointer;
+      .theme-toggle {
+        padding: 12px 0;
+
+        .toggle-label {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        mat-icon {
+          font-size: 20px;
+          width: 20px;
+          height: 20px;
+        }
       }
 
       .actions {
@@ -183,6 +189,7 @@ import { ConfigService, AppConfig } from '../core/services/config.service';
   ],
 })
 export default class ConfigComponent {
+  readonly theme = inject(ThemeService);
   private readonly config = inject(ConfigService);
   private readonly snackBar = inject(MatSnackBar);
 

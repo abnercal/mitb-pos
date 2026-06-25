@@ -8,8 +8,8 @@ export class PrecioService extends BaseCrudService<Precio> {
   override readonly endpoint = 'precios';
 
   getByPresentacion(idprodPresenta: number, idtipoCli?: number): Observable<PrecioConsulta> {
-    let params: any = {};
-    if (idtipoCli != null) params.idtipoCli = idtipoCli;
+    const params: Record<string, string | number> = {};
+    if (idtipoCli != null) params['idtipoCli'] = idtipoCli;
     return this.http.get<{ data: PrecioConsulta }>(`${this.apiUrl}/by-presentacion/${idprodPresenta}`, { params }).pipe(map(r => r.data));
   }
 

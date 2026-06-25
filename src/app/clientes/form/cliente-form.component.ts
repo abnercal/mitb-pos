@@ -1,5 +1,5 @@
 import { Component, OnInit, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -16,16 +16,35 @@ import { Cliente, TipoClie } from '../../core/interfaces/cliente.interface';
   selector: 'app-cliente-form',
   standalone: true,
   imports: [
-    CommonModule, ReactiveFormsModule, MatDialogModule, MatFormFieldModule,
-    MatInputModule, MatSelectModule, MatButtonModule, MatSlideToggleModule, MatSnackBarModule,
+    ReactiveFormsModule,
+    MatDialogModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    MatButtonModule,
+    MatSlideToggleModule,
+    MatSnackBarModule,
   ],
   templateUrl: './cliente-form.component.html',
-  styles: [`
-    .full-width { width: 100%; margin-bottom: 16px; }
-    .form-row { display: flex; gap: 16px; margin-bottom: 16px; }
-    .flex-1 { flex: 1; }
-    .toggle-row { margin: 16px 0; }
-  `],
+  styles: [
+    `
+      .full-width {
+        width: 100%;
+        margin-bottom: 16px;
+      }
+      .form-row {
+        display: flex;
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+      .flex-1 {
+        flex: 1;
+      }
+      .toggle-row {
+        margin: 16px 0;
+      }
+    `,
+  ],
 })
 export class ClienteFormComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
@@ -69,9 +88,16 @@ export class ClienteFormComponent implements OnInit {
       direccion: v.direccion || '',
       estado: v.estado ? 1 : 0,
     };
-    const obs = this.data ? this.service.update(this.data._id!, payload) : this.service.create(payload);
+    const obs = this.data
+      ? this.service.update(this.data._id!, payload)
+      : this.service.create(payload);
     obs.subscribe({
-      next: () => { this.snackBar.open(`Cliente ${this.data ? 'actualizado' : 'creado'}`, 'Cerrar', { duration: 2000 }); this.dialogRef.close(true); },
+      next: () => {
+        this.snackBar.open(`Cliente ${this.data ? 'actualizado' : 'creado'}`, 'Cerrar', {
+          duration: 2000,
+        });
+        this.dialogRef.close(true);
+      },
       error: () => this.snackBar.open('Error al guardar', 'Cerrar', { duration: 3000 }),
     });
   }

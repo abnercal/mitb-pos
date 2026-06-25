@@ -1,5 +1,5 @@
 import { Component, inject, signal, DestroyRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { RouterModule } from '@angular/router';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -26,7 +26,6 @@ interface NavItem {
   selector: 'app-main-layout',
   standalone: true,
   imports: [
-    CommonModule,
     RouterModule,
     MatSidenavModule,
     MatToolbarModule,
@@ -51,17 +50,18 @@ interface NavItem {
         <mat-divider></mat-divider>
 
         <mat-nav-list>
-          <a
-            mat-list-item
-            *ngFor="let item of filteredNavItems"
-            [routerLink]="item.route"
-            routerLinkActive="active-link"
-            [routerLinkActiveOptions]="{ exact: item.route === '/' }"
-            (click)="onNavClick()"
-          >
-            <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
-            <span matListItemTitle>{{ item.label }}</span>
-          </a>
+          @for (item of filteredNavItems; track item) {
+            <a
+              mat-list-item
+              [routerLink]="item.route"
+              routerLinkActive="active-link"
+              [routerLinkActiveOptions]="{ exact: item.route === '/' }"
+              (click)="onNavClick()"
+            >
+              <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
+              <span matListItemTitle>{{ item.label }}</span>
+            </a>
+          }
         </mat-nav-list>
       </mat-sidenav>
 
@@ -112,7 +112,7 @@ interface NavItem {
 
       .sidenav {
         width: 250px;
-        background: #fafafa;
+        background: var(--mat-sys-surface);
       }
 
       .sidenav-header {
@@ -125,7 +125,7 @@ interface NavItem {
       .sidenav-brand {
         font-size: 20px;
         font-weight: 700;
-        color: #1565c0;
+        color: var(--mat-sys-primary);
       }
 
       .toolbar {
@@ -141,13 +141,16 @@ interface NavItem {
       .content {
         padding: 24px;
         min-height: calc(100vh - 64px);
-        background: #f5f5f5;
+        background: var(--mat-sys-surface-container-low);
       }
 
-      .pos-btn { margin-right: 12px; font-weight: 600; }
+      .pos-btn {
+        margin-right: 12px;
+        font-weight: 600;
+      }
       .active-link {
-        background: rgba(21, 101, 192, 0.1) !important;
-        border-left: 3px solid #1565c0;
+        background: var(--mat-sys-primary-container) !important;
+        border-left: 3px solid var(--mat-sys-primary);
       }
 
       .user-info-menu {
@@ -175,12 +178,22 @@ export default class MainLayoutComponent {
     { icon: 'point_of_sale', label: 'POS', route: '/pos', feature: 'pos' },
     { icon: 'shopping_cart', label: 'Ventas', route: '/ventas', feature: 'ventas' },
     { icon: 'inventory_2', label: 'Productos', route: '/productos', feature: 'productos' },
-    { icon: 'assessment', label: 'Inventario', route: '/reportes/inventario', feature: 'inventario' },
+    {
+      icon: 'assessment',
+      label: 'Inventario',
+      route: '/reportes/inventario',
+      feature: 'inventario',
+    },
     { icon: 'people_outline', label: 'Clientes', route: '/clientes', feature: 'clientes' },
     { icon: 'category', label: 'Categorías', route: '/categorias', feature: 'categorias' },
     { icon: 'branding', label: 'Marcas', route: '/marcas', feature: 'marcas' },
     { icon: 'straighten', label: 'Unidades', route: '/unidades', feature: 'unidades' },
-    { icon: 'inventory', label: 'Presentaciones', route: '/presentaciones', feature: 'presentaciones' },
+    {
+      icon: 'inventory',
+      label: 'Presentaciones',
+      route: '/presentaciones',
+      feature: 'presentaciones',
+    },
     { icon: 'local_shipping', label: 'Proveedores', route: '/proveedores', feature: 'proveedores' },
     { icon: 'shopping_cart', label: 'Compras', route: '/compras', feature: 'compras' },
     { icon: 'store', label: 'Sucursales', route: '/sucursales', feature: 'sucursales' },
@@ -188,14 +201,20 @@ export default class MainLayoutComponent {
     { icon: 'admin_panel_settings', label: 'Roles', route: '/roles', feature: 'roles' },
     { icon: 'vpn_key', label: 'Permisos', route: '/permisos', feature: 'permisos' },
     { icon: 'settings', label: 'Configuración', route: '/config', feature: 'config' },
-    { icon: 'tune', label: 'Módulos (Admin)', route: '/modulos', feature: 'modulos', superadminOnly: true },
+    {
+      icon: 'tune',
+      label: 'Módulos (Admin)',
+      route: '/modulos',
+      feature: 'modulos',
+      superadminOnly: true,
+    },
   ];
 
   constructor() {
     this.breakpointObserver
       .observe([Breakpoints.Handset, Breakpoints.TabletPortrait])
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(result => {
+      .subscribe((result) => {
         this.isMobile.set(result.matches);
         if (result.matches) {
           this.sidebarOpen.set(false);
