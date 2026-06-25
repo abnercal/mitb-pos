@@ -1,17 +1,13 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 
-import { FormsModule } from '@angular/forms';
-import {
-  MatDialogModule,
-  MAT_DIALOG_DATA,
-  MatDialogRef,
-  MatDialog,
-} from '@angular/material/dialog';
+import { ReactiveFormsModule, Validators } from '@angular/forms';
+import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatIconModule } from '@angular/material/icon';
+import { type Observable } from 'rxjs';
 import { UsuarioService } from '../../core/services/usuario.service';
 import { RolService } from '../../core/services/rol.service';
 import { SucursalService } from '../../core/services/sucursal.service';
@@ -19,12 +15,13 @@ import { AuthService } from '../../core/services/auth.service';
 import { Usuario } from '../../core/interfaces/usuario.interface';
 import { Rol } from '../../core/interfaces/rol.interface';
 import { Sucursal } from '../../core/interfaces/sucursal.interface';
+import { BaseFormComponent } from '../../shared/components/base-form';
 
 @Component({
   selector: 'app-usuarios-form',
   standalone: true,
   imports: [
-    FormsModule,
+    ReactiveFormsModule,
     MatDialogModule,
     MatButtonModule,
     MatInputModule,
@@ -91,90 +88,90 @@ import { Sucursal } from '../../core/interfaces/sucursal.interface';
     `,
   ],
 })
-export class UsuariosFormComponent implements OnInit {
-  private readonly service = inject(UsuarioService);
+export class UsuariosFormComponent extends BaseFormComponent<Usuario> {
+  private readonly usuarioService = inject(UsuarioService);
   private readonly rolService = inject(RolService);
   private readonly sucursalService = inject(SucursalService);
   private readonly authService = inject(AuthService);
   private readonly dialog = inject(MatDialog);
-  private readonly dialogRef = inject(MatDialogRef<UsuariosFormComponent>);
-  private readonly dialogData = inject<Usuario | null>(MAT_DIALOG_DATA);
-  private readonly snackBar = inject(MatSnackBar);
 
-  /** Normaliza el dato: openCreate pasa null, openEdit pasa el Usuario directamente */
-  get data(): { usuario: Usuario | null } {
-    return { usuario: this.dialogData };
-  }
+  protected override crudService = this.usuarioService;
+  override entityName = 'Usuario';
 
   readonly roles = signal<Rol[]>([]);
   readonly sucursales = signal<Sucursal[]>([]);
-  readonly saving = signal(false);
   readonly showPassword = signal(false);
   readonly previewUrl = signal<string | null>(null);
 
   private selectedFile: File | null = null;
   private existingImageUrl: string | null = null;
 
-  /** Valida que la contraseña cumpla los requisitos del backend */
   get passwordValid(): boolean {
-    if (!this.form.password) return false;
-    return (
-      this.form.password.length >= 8 &&
-      /[A-Z]/.test(this.form.password) &&
-      /[a-z]/.test(this.form.password) &&
-      /[0-9]/.test(this.form.password)
-    );
+    const pw: string = this.form.get('password')?.value ?? '';
+    if (!pw) return false;
+    return pw.length >= 8 && /[A-Z]/.test(pw) && /[a-z]/.test(pw) && /[0-9]/.test(pw);
   }
 
-  form: {
-    nombre: string;
-    apellido: string;
-    email: string;
-    username: string;
-    password: string;
-    codigoemp: string;
-    idsucursal: number | null;
-    roles: number[];
-  } = {
-    nombre: '',
-    apellido: '',
-    email: '',
-    username: '',
-    password: '',
-    codigoemp: '',
-    idsucursal: null,
-    roles: [],
-  };
+  override form = this.fb.group({
+    nombre: [this.data?.nombre ?? '', Validators.required],
+    apellido: [this.data?.apellido ?? ''],
+    email: [this.data?.email ?? '', [Validators.required, Validators.email]],
+    username: [this.data?.username ?? ''],
+    password: [''],
+    idsucursal: [this.data?.idsucursal ?? null as number | null],
+    roles: [this.data?.Roles?.map((r) => r._id!).filter((id): id is number => id != null) ?? []],
+  });
 
-  ngOnInit(): void {
+  override loadDependencies(): void {
     const session = this.authService.getSession();
+
     this.rolService.getAllList().subscribe((r) => this.roles.set(r));
     this.sucursalService.getAllList().subscribe((s) => {
       this.sucursales.set(s);
       // Default: sucursal del usuario logueado
-      if (!this.data.usuario && session?.user.idsucursal) {
-        this.form.idsucursal = session.user.idsucursal;
+      if (!this.data && session?.user.idsucursal) {
+        this.form.patchValue({ idsucursal: session.user.idsucursal });
       }
     });
 
-    if (this.data.usuario) {
-      const u = this.data.usuario;
-      this.form = {
-        nombre: u.nombre,
-        apellido: u.apellido || '',
-        email: u.email,
-        username: u.username || '',
-        password: '',
-        codigoemp: u.codigoemp || '',
-        idsucursal: u.idsucursal || null,
-        roles: (u.Roles || []).map((r) => r._id!).filter((id): id is number => id != null),
-      };
-      // Mostrar imagen existente si tiene
-      if (u.imageUrl) {
-        this.existingImageUrl = u.imageUrl;
-        this.previewUrl.set(u.imageUrl);
-      }
+    if (this.data?.imageUrl) {
+      this.existingImageUrl = this.data.imageUrl;
+      this.previewUrl.set(this.data.imageUrl);
     }
+  }
+
+  protected override buildPayload(): Record<string, unknown> {
+    const raw = this.form.getRawValue();
+    const payload: Record<string, unknown> = {
+      nombre: raw.nombre,
+      email: raw.email,
+      apellido: raw.apellido || undefined,
+      username: raw.username || undefined,
+      idsucursal: raw.idsucursal || undefined,
+      roles: (raw.roles ?? []).filter((id: unknown): id is number => id != null),
+    };
+    // Solo enviar password si es crear o se escribió una nueva en edición
+    if (!this.data || raw.password) {
+      payload['password'] = raw.password;
+    }
+    return payload;
+  }
+
+  protected override createEntity(): Observable<Usuario> {
+    return this.usuarioService.createWithImage(this.buildPayload(), this.selectedFile);
+  }
+
+  protected override updateEntity(): Observable<Usuario> {
+    return this.usuarioService.updateWithImage(
+      (this.data as Usuario)._id!,
+      this.buildPayload(),
+      this.selectedFile,
+    );
+  }
+
+  protected override onSubmitError(err: unknown): void {
+    this.saving.set(false);
+    this.snackBar.open(this.getErrorMessage(err), 'Cerrar', { duration: 5000 });
   }
 
   onFileSelected(event: Event): void {
@@ -182,7 +179,6 @@ export class UsuariosFormComponent implements OnInit {
     const file = input.files?.[0];
     if (!file) return;
 
-    // Validar tipo y tamaño (2MB máx)
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
       this.snackBar.open('Solo se permiten imágenes JPG, PNG o WebP', 'Cerrar', { duration: 3000 });
       return;
@@ -193,7 +189,6 @@ export class UsuariosFormComponent implements OnInit {
     }
 
     this.selectedFile = file;
-    // Preview local
     const reader = new FileReader();
     reader.onload = () => this.previewUrl.set(reader.result as string);
     reader.readAsDataURL(file);
@@ -213,59 +208,20 @@ export class UsuariosFormComponent implements OnInit {
 
   removeImage(): void {
     this.selectedFile = null;
-    this.previewUrl.set(this.existingImageUrl); // vuelve a la imagen actual del servidor
+    this.previewUrl.set(this.existingImageUrl);
   }
 
   private getErrorMessage(err: unknown): string {
-    const apiError = err as { error?: { errors?: { msg: string }[]; message?: string } } | null;
-    // Error de validación (422) con detalles de express-validator
+    const apiError = err as
+      | { error?: { errors?: { msg: string }[]; message?: string } }
+      | null
+      | undefined;
     if (apiError?.error?.errors?.length) {
       return apiError.error.errors.map((e) => e.msg).join('. ');
     }
-    // Error de negocio con mensaje
     if (apiError?.error?.message) {
       return apiError.error.message;
     }
     return 'Error inesperado';
-  }
-
-  save(): void {
-    if (!this.form.nombre || !this.form.email) return;
-    if (!this.data.usuario && !this.passwordValid) {
-      this.snackBar.open('La contraseña no cumple los requisitos', 'Cerrar', { duration: 4000 });
-      return;
-    }
-    this.saving.set(true);
-
-    const payload: Record<string, unknown> = {
-      nombre: this.form.nombre,
-      email: this.form.email,
-      apellido: this.form.apellido || undefined,
-      username: this.form.username || undefined,
-      idsucursal: this.form.idsucursal || undefined,
-      roles: this.form.roles.length ? this.form.roles : [],
-    };
-
-    // Solo enviar password si es crear o si se escribió una nueva en edición
-    if (!this.data.usuario || this.form.password) {
-      payload['password'] = this.form.password;
-    }
-
-    const obs = this.data.usuario
-      ? this.service.updateWithImage(this.data.usuario._id!, payload, this.selectedFile)
-      : this.service.createWithImage(payload, this.selectedFile);
-
-    obs.subscribe({
-      next: () => {
-        this.snackBar.open(this.data.usuario ? 'Usuario actualizado' : 'Usuario creado', 'Cerrar', {
-          duration: 2000,
-        });
-        this.dialogRef.close(true);
-      },
-      error: (err) => {
-        this.snackBar.open(this.getErrorMessage(err), 'Cerrar', { duration: 5000 });
-        this.saving.set(false);
-      },
-    });
   }
 }
