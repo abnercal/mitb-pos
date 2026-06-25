@@ -1,46 +1,62 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, inject } from '@angular/core';
 
-import { FormsModule } from '@angular/forms';
-import { MatDialogModule, MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+import { ReactiveFormsModule, Validators } from '@angular/forms';
+import { MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatInputModule } from '@angular/material/input';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { SucursalService } from '../../core/services/sucursal.service';
 import { Sucursal } from '../../core/interfaces/sucursal.interface';
+import { BaseFormComponent } from '../../shared/components/base-form';
 
 @Component({
   selector: 'app-sucursales-form',
   standalone: true,
-  imports: [FormsModule, MatDialogModule, MatButtonModule, MatInputModule, MatSnackBarModule],
+  imports: [
+    ReactiveFormsModule,
+    MatDialogModule,
+    MatButtonModule,
+    MatInputModule,
+    MatSnackBarModule,
+  ],
   template: `
     <h2 mat-dialog-title>{{ data ? 'Editar sucursal' : 'Nueva sucursal' }}</h2>
-    <mat-dialog-content>
-      <div class="form-grid">
-        <mat-form-field appearance="outline">
-          <mat-label>Nombre *</mat-label>
-          <input matInput [(ngModel)]="form.nombre" required />
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Teléfono</mat-label>
-          <input matInput [(ngModel)]="form.telefono" />
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Dirección</mat-label>
-          <input matInput [(ngModel)]="form.direccion" />
-        </mat-form-field>
-      </div>
-    </mat-dialog-content>
-    <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close>Cancelar</button>
-      <button
-        mat-raised-button
-        color="primary"
-        [disabled]="saving() || !form.nombre"
-        (click)="save()"
-      >
-        {{ saving() ? 'Guardando…' : 'Guardar' }}
-      </button>
-    </mat-dialog-actions>
+
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <mat-dialog-content>
+        <div class="form-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Nombre *</mat-label>
+            <input matInput formControlName="nombre" required />
+            @if (form.get('nombre')?.hasError('required')) {
+              <mat-error>El nombre es requerido</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Teléfono</mat-label>
+            <input matInput formControlName="telefono" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Dirección</mat-label>
+            <input matInput formControlName="direccion" />
+          </mat-form-field>
+        </div>
+      </mat-dialog-content>
+
+      <mat-dialog-actions align="end">
+        <button mat-button type="button" mat-dialog-close>Cancelar</button>
+        <button
+          mat-raised-button
+          color="primary"
+          type="submit"
+          [disabled]="form.invalid || saving()"
+        >
+          {{ saving() ? 'Guardando…' : 'Guardar' }}
+        </button>
+      </mat-dialog-actions>
+    </form>
   `,
   styles: [
     `
@@ -56,40 +72,21 @@ import { Sucursal } from '../../core/interfaces/sucursal.interface';
     `,
   ],
 })
-export class SucursalesFormComponent implements OnInit {
-  private readonly service = inject(SucursalService);
-  private readonly dialogRef = inject(MatDialogRef<SucursalesFormComponent>);
-  readonly data: Sucursal | null = inject(MAT_DIALOG_DATA);
-  private readonly snackBar = inject(MatSnackBar);
-  readonly saving = signal(false);
-  form = { nombre: '', direccion: '', telefono: '' };
+export class SucursalesFormComponent extends BaseFormComponent<Sucursal> {
+  protected override crudService = inject(SucursalService);
+  override entityName = 'Sucursal';
 
-  ngOnInit(): void {
-    if (this.data) {
-      this.form = {
-        nombre: this.data.nombre,
-        direccion: this.data.direccion || '',
-        telefono: this.data.telefono || '',
-      };
-    }
-  }
+  override form = this.fb.group({
+    nombre: [this.data?.nombre ?? '', Validators.required],
+    telefono: [this.data?.telefono ?? ''],
+    direccion: [this.data?.direccion ?? ''],
+  });
 
-  save(): void {
-    this.saving.set(true);
-    const obs = this.data
-      ? this.service.update(this.data.idsucursal!, this.form)
-      : this.service.create(this.form);
-    obs.subscribe({
-      next: () => {
-        this.snackBar.open(this.data ? 'Sucursal actualizada' : 'Sucursal creada', 'Cerrar', {
-          duration: 2000,
-        });
-        this.dialogRef.close(true);
-      },
-      error: () => {
-        this.snackBar.open('Error al guardar', 'Cerrar', { duration: 3000 });
-        this.saving.set(false);
-      },
-    });
+  // Sucursal usa idsucursal como PK, no _id
+  protected override updateEntity() {
+    return this.crudService.update(
+      (this.data as Sucursal).idsucursal!,
+      this.buildPayload() as Partial<Sucursal>,
+    );
   }
 }

@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideHttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { BaseCrudService } from './base-crud.service';
-import { environment } from '../../../../src/environments/environment';
+import { environment } from '../../../environments/environment';
 
 interface TestEntity {
   _id?: number;
