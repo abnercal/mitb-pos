@@ -34,7 +34,7 @@ import { ProductoPresentacion } from '../../core/interfaces/producto-presentacio
     `
       .pres-hint {
         margin: 0 0 16px;
-        color: #666;
+        color: var(--mat-sys-on-surface-variant);
       }
       .pres-list {
         display: flex;
@@ -46,7 +46,7 @@ import { ProductoPresentacion } from '../../core/interfaces/producto-presentacio
         align-items: center;
         gap: 12px;
         padding: 14px 16px;
-        background: #fff;
+        background: var(--mat-sys-surface);
         border: 1px solid var(--mat-sys-outline-variant);
         border-radius: 8px;
         cursor: pointer;

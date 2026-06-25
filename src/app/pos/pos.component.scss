@@ -14,13 +14,13 @@
 .search-bar {
   display: flex;
   align-items: center;
-  background: #fff;
+  background: var(--mat-sys-surface-container);
   border-radius: 8px;
   padding: 4px 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 .search-icon {
-  color: #666;
+  color: var(--mat-sys-on-surface-variant);
   margin-right: 12px;
 }
 .search-input {
@@ -45,7 +45,7 @@
 }
 .product-count {
   margin: 8px 0;
-  color: #666;
+  color: var(--mat-sys-on-surface-variant);
   font-size: 13px;
 }
 .product-grid {
@@ -85,7 +85,7 @@
 }
 .prod-marca {
   font-size: 12px;
-  color: #999;
+  color: var(--mat-sys-on-surface-variant);
 }
 .prod-price {
   font-size: 16px;

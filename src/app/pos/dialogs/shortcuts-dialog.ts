@@ -45,7 +45,7 @@ import { MatIconModule } from '@angular/material/icon';
         border-radius: 4px;
       }
       .shortcut-row span {
-        color: #555;
+        color: var(--mat-sys-on-surface-variant);
       }
     `,
   ],
