@@ -17,11 +17,13 @@ import { AuthService } from '../core/services/auth.service';
 import { PrecioService } from '../core/services/precio.service';
 import { AppEventsService } from '../core/services/app-events.service';
 import { TipoPagoService } from '../core/services/tipo-pago.service';
+import { TipoClienteService } from '../core/services/tipo-cliente.service';
 import { Producto } from '../core/interfaces/producto.interface';
-import { Cliente } from '../core/interfaces/cliente.interface';
+import { Cliente, TipoClie } from '../core/interfaces/cliente.interface';
 import { Venta } from '../core/interfaces/venta.interface';
 import { ProductoPresentacion } from '../core/interfaces/producto-presentacion.interface';
 import { TipoPago } from '../core/interfaces/tipo-pago.interface';
+import { Precio } from '../core/interfaces/precio.interface';
 import { TicketVentaComponent } from '../shared/components/ticket-venta.component';
 import { PosPresDialog, PosConfirmDialog, PosShortcutsDialog } from './dialogs';
 
@@ -40,6 +42,8 @@ interface PendingSale {
   items: CartItem[];
   clientId: number | null;
   tipoPagoId: number;
+  nombreCliente?: string;
+  tipoCliVentaId?: number | null;
 }
 
 @Component({
@@ -147,7 +151,7 @@ interface PendingSale {
                 <span class="prod-marca">{{ p.Marca?.nombre || '' }}</span>
                 @if (p.Presentaciones && p.Presentaciones.length === 1) {
                   <span class="prod-price"
-                    >Q {{ p.Presentaciones[0].precio_venta || 0 | number: '.2' }}</span
+                    >Q {{ precioResuelto(p.Presentaciones[0]) | number: '.2' }}</span
                   >
                 }
                 @if (!p.Presentaciones || p.Presentaciones.length !== 1) {
@@ -182,13 +186,28 @@ interface PendingSale {
           </div>
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Cliente</mat-label>
-            <mat-select [(value)]="selectedClientId">
-              <mat-option [value]="null">Mostrador</mat-option>
+            <mat-select [value]="selectedClientId" (selectionChange)="onClientChange($event.value)">
+              <mat-option [value]="null">Consumidor Final (sin cliente)</mat-option>
               @for (c of clientes; track c) {
                 <mat-option [value]="c._id">{{ c.nombres }} {{ c.apellidos }}</mat-option>
               }
             </mat-select>
           </mat-form-field>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Tipo de venta</mat-label>
+            <mat-select [(value)]="selectedTipoCliVentaId" matTooltip="Determina el precio aplicado a los productos de esta venta">
+              <mat-option [value]="null">Sin tipo especial</mat-option>
+              @for (t of tiposCliente; track t) {
+                <mat-option [value]="t.idtipoCli">{{ t.nombre }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          @if (isCFSelected) {
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Nombre del cliente</mat-label>
+              <input matInput [(ngModel)]="nombreCliente" placeholder="Nombre para esta venta">
+            </mat-form-field>
+          }
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Tipo de pago</mat-label>
             <mat-select [(value)]="selectedTipoPagoId">
@@ -266,6 +285,7 @@ export default class PosComponent implements OnInit {
   private readonly ventaService = inject(VentaService);
   private readonly clienteService = inject(ClienteService);
   private readonly tipoPagoService = inject(TipoPagoService);
+  private readonly tipoClienteService = inject(TipoClienteService);
   private readonly precioService = inject(PrecioService);
   private readonly authService = inject(AuthService);
   private readonly snackBar = inject(MatSnackBar);
@@ -276,17 +296,53 @@ export default class PosComponent implements OnInit {
   readonly productsError = signal<string | null>(null);
   readonly searchTerm = signal('');
   readonly allProducts = signal<Producto[]>([]);
+  readonly allPrecios = signal<Precio[]>([]);
   clientes: Cliente[] = [];
   selectedClientId: number | null = null;
   selectedTipoPagoId = 3;
   tiposPago: TipoPago[] = [];
+  tiposCliente: TipoClie[] = [];
+  /** Tipo de cliente usado para resolver precios de ESTA venta (independiente del Cliente elegido). */
+  selectedTipoCliVentaId: number | null = null;
 
   readonly cartItems = signal<CartItem[]>([]);
   readonly hasPendingSale = signal(false); // para mostrar indicador visual
 
+  /** Nombre libre para el ticket — solo se usa si el cajero lo escribe (p.ej. venta a Consumidor Final). Vacío = sin override, prevalece el Cliente real resuelto por el servidor. */
+  nombreCliente = '';
+  get isCFSelected(): boolean {
+    if (this.selectedClientId == null) return false;
+    const c = this.clientes.find(cl => cl._id === this.selectedClientId);
+    return c?.nit === 'CF';
+  }
+
   readonly cartTotal = computed(() =>
     this.cartItems().reduce((sum, i) => sum + i.cantidad * i.precio, 0),
   );
+
+  /** idprodPresenta:idtipoCli -> precio, para resolver el catálogo sin ida y vuelta al servidor por cada tarjeta. */
+  private readonly preciosPorTipo = computed(() => {
+    const map = new Map<string, number>();
+    for (const p of this.allPrecios()) {
+      if (p.idprodPresenta != null && p.idtipoCli != null) {
+        map.set(`${p.idprodPresenta}:${p.idtipoCli}`, Number(p.precio));
+      }
+    }
+    return map;
+  });
+
+  /**
+   * Precio de una presentación según "Tipo de venta". Sin tipo elegido (arranque
+   * de la pantalla) muestra precio_venta — el precio general, no filtrado por
+   * ningún tipo de cliente. Con Mayorista/Minorista elegido, muestra ESE precio
+   * específico si existe una fila en `precios`, con precio_venta como fallback.
+   */
+  precioResuelto(pp: ProductoPresentacion): number {
+    const tipo = this.selectedTipoCliVentaId;
+    const base = Number(pp.precio_venta) || 0;
+    if (tipo == null) return base;
+    return this.preciosPorTipo().get(`${pp.idprodPresenta}:${tipo}`) ?? base;
+  }
 
   private lastKeyTime = 0;
   private scanBuffer = '';
@@ -327,6 +383,10 @@ export default class PosComponent implements OnInit {
     this.loadProducts();
     this.clienteService.getAllList().subscribe((r) => (this.clientes = r));
     this.tipoPagoService.getAll().subscribe((r) => (this.tiposPago = r));
+    this.tipoClienteService.getAll().subscribe((r) => (this.tiposCliente = r));
+    // Todos los precios especiales de una sola vez — el catálogo entero se
+    // re-precia al instante al cambiar "Tipo de venta", sin pedir uno por uno.
+    this.precioService.getAllList().subscribe((r) => this.allPrecios.set(r));
 
     // Restaurar venta pendiente si existe
     this.loadPendingSale();
@@ -354,6 +414,8 @@ export default class PosComponent implements OnInit {
       items: this.cartItems(),
       clientId: this.selectedClientId,
       tipoPagoId: this.selectedTipoPagoId,
+      nombreCliente: this.nombreCliente,
+      tipoCliVentaId: this.selectedTipoCliVentaId,
     };
     localStorage.setItem(PENDING_SALE_KEY, JSON.stringify(data));
   }
@@ -367,7 +429,11 @@ export default class PosComponent implements OnInit {
       if (!data.items?.length) return;
       this.cartItems.set(data.items);
       this.selectedClientId = data.clientId ?? null;
+      const cl = data.clientId != null ? this.clientes.find(c => c._id === data.clientId) : null;
+      this.nombreCliente = data.nombreCliente ??
+        (cl ? [cl.nombres, cl.apellidos].filter(Boolean).join(' ') : '');
       this.selectedTipoPagoId = data.tipoPagoId ?? 3;
+      this.selectedTipoCliVentaId = data.tipoCliVentaId ?? null;
       this.showCart.set(true);
       this.snackBar.open(
         `Hay una venta pendiente con ${data.items.length} producto${data.items.length !== 1 ? 's' : ''}`,
@@ -449,10 +515,28 @@ export default class PosComponent implements OnInit {
     this.searchTerm.set('');
     this.selectedClientId = null;
     this.selectedTipoPagoId = 3;
+    this.selectedTipoCliVentaId = null;
     this.selectedProductIndex.set(-1);
     this.showCart.set(false);
+    this.nombreCliente = '';
     localStorage.removeItem(PENDING_SALE_KEY);
     this.snackBar.open('Nueva venta iniciada', 'Cerrar', { duration: 1500 });
+  }
+
+  onClientChange(clientId: number | null): void {
+    this.selectedClientId = clientId;
+    if (clientId == null) {
+      // Sin cliente elegido: no se manda `nombre` — el backend resuelve solo
+      // contra el Cliente real "Consumidor Final" (nit CF).
+      this.nombreCliente = '';
+      this.selectedTipoCliVentaId = null;
+    } else {
+      const c = this.clientes.find(cl => cl._id === clientId);
+      this.nombreCliente = [c?.nombres, c?.apellidos].filter(Boolean).join(' ');
+      // Convenience default: se sincroniza con el tipo de cliente real, pero queda
+      // editable manualmente después (no se vuelve a sincronizar hasta el próximo cambio de cliente).
+      this.selectedTipoCliVentaId = c?.idtipoCli ?? null;
+    }
   }
 
   onSearchKeydown(event: KeyboardEvent): void {
@@ -541,7 +625,11 @@ export default class PosComponent implements OnInit {
 
     const ref = this.dialog.open(PosPresDialog, {
       width: '420px',
-      data: { producto: p, presentaciones: pres },
+      data: {
+        producto: p,
+        presentaciones: pres,
+        resolvePrecio: (pp: ProductoPresentacion) => this.precioResuelto(pp),
+      },
     });
 
     ref.afterClosed().subscribe((selected: ProductoPresentacion | null) => {
@@ -561,42 +649,28 @@ export default class PosComponent implements OnInit {
       return;
     }
 
-    const baseItem = {
-      idprodPresenta: pp.idprodPresenta!,
-      nombre: p.nombre,
-      presentacion: pp.Presentacion?.nombre || '',
-      cantidad: 1,
-      precio: Number(pp.precio_venta) || 0,
-    };
+    // El precio se resuelve según el control "Tipo de venta" — misma fuente
+    // local que ya usan las tarjetas del catálogo, así el precio agregado al
+    // carrito es SIEMPRE el mismo que se venía mostrando (sin ida y vuelta al
+    // servidor ni desfase entre lo que se ve y lo que se cobra).
+    const idtipoCli = this.selectedTipoCliVentaId;
+    const tipoCliente = idtipoCli != null
+      ? this.tiposCliente.find((t) => t.idtipoCli === idtipoCli)
+      : undefined;
+    const tieneOverride = idtipoCli != null
+      && this.preciosPorTipo().has(`${pp.idprodPresenta}:${idtipoCli}`);
 
-    if (this.selectedClientId != null) {
-      const cliente = this.clientes.find((c) => c._id === this.selectedClientId);
-      const idtipoCli = cliente?.idtipoCli;
-
-      if (idtipoCli != null) {
-        this.precioService.getByPresentacion(pp.idprodPresenta!, idtipoCli).subscribe({
-          next: (res) => {
-            this.cartItems.update((items) => [
-              ...items,
-              {
-                ...baseItem,
-                precio: Number(res.precio),
-                tipoprecio: res.fuente === 'precio_especifico' ? res.tipoprecio : undefined,
-              },
-            ]);
-          },
-          error: () => {
-            console.warn(
-              `No se pudo obtener precio para presentación ${pp.idprodPresenta}, usando precio_venta`,
-            );
-            this.cartItems.update((items) => [...items, { ...baseItem }]);
-          },
-        });
-        return;
-      }
-    }
-
-    this.cartItems.update((items) => [...items, { ...baseItem }]);
+    this.cartItems.update((items) => [
+      ...items,
+      {
+        idprodPresenta: pp.idprodPresenta!,
+        nombre: p.nombre,
+        presentacion: pp.Presentacion?.nombre || '',
+        cantidad: 1,
+        precio: this.precioResuelto(pp),
+        tipoprecio: tieneOverride ? tipoCliente?.nombre : undefined,
+      },
+    ]);
   }
 
   updateQty(index: number, qty: number): void {
@@ -624,44 +698,63 @@ export default class PosComponent implements OnInit {
 
     ref.afterClosed().subscribe((confirmed) => {
       if (!confirmed) return;
+      this.doCheckout(total);
+    });
+  }
 
-      const session = this.authService.getSession();
-      if (!session) {
-        this.snackBar.open('No hay sesión activa', 'Cerrar', { duration: 3000 });
-        return;
-      }
+  private doCheckout(total: number): void {
+    // Obtener referencia auto-generada del API
+    this.ventaService.getNextCode().subscribe({
+      next: (codeResult) => this.procesarPago(total, codeResult.codigo),
+      error: () => this.procesarPago(total, `POS-${Date.now()}`),
+    });
+  }
 
-      const payload = {
-        nombre: `POS-${Date.now()}`,
-        idcliente: this.selectedClientId || undefined,
-        idsucursal: session.user.idsucursal ?? undefined,
-        idusuario: session.user.id,
-        total_orden: total,
-        detalles: this.cartItems().map((i) => ({
-          idprodPresenta: i.idprodPresenta,
-          cantidad: i.cantidad,
-          precio: i.precio,
-        })),
-        pago: { idtipopago: this.selectedTipoPagoId, importe: total, estado: 'pagado' },
-      };
+  private procesarPago(total: number, referencia: string): void {
+    const session = this.authService.getSession();
+    if (!session) {
+      this.snackBar.open('No hay sesión activa', 'Cerrar', { duration: 3000 });
+      return;
+    }
 
-      this.ventaService.create(payload).subscribe({
-        next: (venta: Venta) => {
-          this.snackBar.open('Venta registrada', 'Cerrar', { duration: 3000 });
-          this.cartItems.set([]);
-          localStorage.removeItem(PENDING_SALE_KEY);
-          this.searchTerm.set('');
-          this.selectedClientId = null;
-          this.selectedTipoPagoId = 3;
-          this.appEvents.notifySaleCompleted();
-          this.dialog.open(TicketVentaComponent, {
-            width: '520px',
-            data: venta,
-            autoFocus: false,
-          });
-        },
-        error: () => this.snackBar.open('Error al registrar venta', 'Cerrar', { duration: 3000 }),
-      });
+    const payload = {
+      referencia,
+      // Solo se manda si el cajero escribió un nombre puntual (p.ej. Consumidor
+      // Final con nombre real). Vacío = no se manda, y en las listas prevalece
+      // el Cliente real que el backend ya resuelve (Consumidor Final por defecto).
+      nombre: this.nombreCliente || undefined,
+      idcliente: this.selectedClientId || undefined,
+      idsucursal: session.user.idsucursal ?? undefined,
+      idusuario: session.user.id,
+      total_orden: total,
+      detalles: this.cartItems().map((i) => ({
+        idprodPresenta: i.idprodPresenta,
+        cantidad: i.cantidad,
+        precio: i.precio,
+      })),
+      pago: { idtipopago: this.selectedTipoPagoId, importe: total, estado: 'pagado' },
+      // El POS nunca crea cotizaciones — siempre venta confirmada.
+      esCotizacion: false,
+      idTipoCliVenta: this.selectedTipoCliVentaId,
+    };
+
+    this.ventaService.create(payload).subscribe({
+      next: (venta: Venta) => {
+        this.snackBar.open('Venta registrada', 'Cerrar', { duration: 3000 });
+        this.cartItems.set([]);
+        localStorage.removeItem(PENDING_SALE_KEY);
+        this.searchTerm.set('');
+        this.selectedClientId = null;
+        this.selectedTipoPagoId = 3;
+        this.selectedTipoCliVentaId = null;
+        this.appEvents.notifySaleCompleted();
+        this.dialog.open(TicketVentaComponent, {
+          width: '520px',
+          data: venta,
+          autoFocus: false,
+        });
+      },
+      error: (err) => this.snackBar.open(err.error?.message || 'Error al registrar venta', 'Cerrar', { duration: 5000 }),
     });
   }
 }

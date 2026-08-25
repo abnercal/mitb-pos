@@ -1,264 +1,294 @@
-<h2 mat-dialog-title>{{ data ? 'Editar' : 'Nuevo' }} producto</h2>
-<form [formGroup]="form" (ngSubmit)="submit()">
-  <mat-dialog-content>
-    <!-- Datos generales del producto -->
-    <mat-form-field appearance="fill" class="full-width">
-      <mat-label>Nombre del producto *</mat-label>
-      <input matInput formControlName="nombre" placeholder="Ej: Huevos" autocomplete="off" />
-      <mat-error>El nombre es requerido</mat-error>
-    </mat-form-field>
+<div class="page-header">
+  <button mat-icon-button (click)="goBack()" matTooltip="Volver a productos">
+    <mat-icon>arrow_back</mat-icon>
+  </button>
+  <h1>{{ data ? 'Editar' : 'Nuevo' }} producto</h1>
+</div>
 
-    <mat-form-field appearance="fill" class="full-width">
-      <mat-label>Descripción</mat-label>
-      <input
-        matInput
-        formControlName="descripcion"
-        placeholder="Descripción opcional"
-        autocomplete="off"
-      />
-    </mat-form-field>
+<mat-card>
+  <mat-card-content>
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <mat-tab-group animationDuration="0ms">
+      <!-- Tab 1: Datos generales -->
+      <mat-tab label="Datos generales">
+        <div class="tab-content">
+          <mat-form-field appearance="fill" class="full-width">
+            <mat-label>Nombre del producto *</mat-label>
+            <input matInput formControlName="nombre" placeholder="Ej: Huevos" autocomplete="off" />
+            <mat-error>El nombre es requerido</mat-error>
+          </mat-form-field>
 
-    <div class="form-row">
-      <mat-form-field appearance="fill" class="flex-1">
-        <mat-label>Categoría</mat-label>
-        <mat-select formControlName="idcategoria">
-          <mat-option [value]="null">Sin categoría</mat-option>
-          @for (c of categorias; track c) {
-            <mat-option [value]="c._id">{{ c.nombre }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
+          <mat-form-field appearance="fill" class="full-width">
+            <mat-label>Descripción</mat-label>
+            <input
+              matInput
+              formControlName="descripcion"
+              placeholder="Descripción opcional"
+              autocomplete="off"
+            />
+          </mat-form-field>
 
-      <mat-form-field appearance="fill" class="flex-1">
-        <mat-label>Marca</mat-label>
-        <mat-select formControlName="idmarca">
-          <mat-option [value]="null">Sin marca</mat-option>
-          @for (m of marcas; track m) {
-            <mat-option [value]="m._id">{{ m.nombre }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
-    </div>
+          <div class="form-row">
+            <mat-form-field appearance="fill" class="flex-1">
+              <mat-label>Categoría</mat-label>
+              <mat-select formControlName="idcategoria">
+                <mat-option [value]="null">Sin categoría</mat-option>
+                @for (c of categorias; track c) {
+                  <mat-option [value]="c._id">{{ c.nombre }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
 
-    <mat-form-field appearance="fill" class="full-width">
-      <mat-label>Unidad de medida base</mat-label>
-      <mat-select formControlName="idunidad">
-        <mat-option [value]="null">Sin unidad</mat-option>
-        @for (u of unidades; track u) {
-          <mat-option [value]="u._id">{{ u.nombre }} ({{ u.abreviatura }})</mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
+            <mat-form-field appearance="fill" class="flex-1">
+              <mat-label>Marca</mat-label>
+              <mat-select formControlName="idmarca">
+                <mat-option [value]="null">Sin marca</mat-option>
+                @for (m of marcas; track m) {
+                  <mat-option [value]="m._id">{{ m.nombre }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          </div>
 
-    <mat-form-field appearance="fill" class="full-width">
-      <mat-label>Stock mínimo (en unidades base)</mat-label>
-      <input matInput formControlName="stock_minimo" type="number" step="0.01" placeholder="0" />
-      <mat-hint>Ej: si tu mínimo son 2 cajas de 30 huevos, poné 60</mat-hint>
-    </mat-form-field>
-
-    <!-- Sección de presentaciones múltiples -->
-    <div class="section-title">
-      <span>Presentaciones</span>
-      <button
-        type="button"
-        mat-mini-fab
-        color="primary"
-        (click)="addPresentacion()"
-        matTooltip="Agregar presentación"
-      >
-        <mat-icon>add</mat-icon>
-      </button>
-    </div>
-
-    <div formArrayName="presentaciones" class="pres-grid">
-      @for (pres of presentacionesArray.controls; track pres; let i = $index; let last = $last) {
-        <div [formGroupName]="i" class="pres-row">
-          <mat-form-field appearance="fill" class="pres-select">
-            <mat-label>Presentación *</mat-label>
-            <mat-select formControlName="idpresentacion" required>
-              <mat-option [value]="null">Seleccionar</mat-option>
-              @for (p of presentacionesDisponibles(i); track p) {
-                <mat-option [value]="p._id">{{ p.nombre }}</mat-option>
+          <mat-form-field appearance="fill" class="full-width">
+            <mat-label>Unidad de medida base</mat-label>
+            <mat-select formControlName="idunidad">
+              <mat-option [value]="null">Sin unidad</mat-option>
+              @for (u of unidades; track u) {
+                <mat-option [value]="u._id">{{ u.nombre }} ({{ u.abreviatura }})</mat-option>
               }
             </mat-select>
-            <mat-error>Requerido</mat-error>
           </mat-form-field>
-          <mat-form-field appearance="fill" class="pres-qty">
-            <mat-label>Cant. base</mat-label>
+
+          <mat-form-field appearance="fill" class="full-width">
+            <mat-label>Stock mínimo (en unidades base)</mat-label>
             <input
               matInput
-              formControlName="cantidad_base"
+              formControlName="stock_minimo"
               type="number"
               step="0.01"
-              placeholder="1"
+              placeholder="0"
             />
+            <mat-hint>Ej: si tu mínimo son 2 cajas de 30 huevos, poné 60</mat-hint>
           </mat-form-field>
-          <mat-form-field appearance="fill" class="pres-price">
-            <mat-label>Precio venta</mat-label>
-            <input
-              matInput
-              formControlName="precio_venta"
-              type="number"
-              step="0.01"
-              placeholder="0.00"
-            />
-          </mat-form-field>
-          <mat-form-field appearance="fill" class="pres-barcode">
-            <mat-label>Código barras</mat-label>
-            <input matInput formControlName="codigo_barras" placeholder="Opcional" />
+
+          <div class="toggle-row">
+            <mat-slide-toggle formControlName="estado" color="primary">
+              {{ form.get('estado')?.value ? 'Activo' : 'Inactivo' }}
+            </mat-slide-toggle>
+          </div>
+
+          <div class="toggle-row">
+            <mat-slide-toggle formControlName="controla_vencimiento" color="primary">
+              Controla vencimiento (requiere fecha de vencimiento en cada compra)
+            </mat-slide-toggle>
+          </div>
+        </div>
+      </mat-tab>
+
+      <!-- Tab 2: Presentaciones -->
+      <mat-tab label="Presentaciones">
+        <div class="tab-content">
+          <div class="section-title">
+            <span>Presentaciones</span>
             <button
-              matSuffix
               type="button"
-              mat-icon-button
-              (click)="scanBarcode(i)"
-              matTooltip="Escanear código de barras"
-              tabindex="-1"
+              mat-mini-fab
+              color="primary"
+              (click)="addPresentacion()"
+              matTooltip="Agregar presentación"
             >
-              <mat-icon>qr_code_scanner</mat-icon>
-            </button>
-          </mat-form-field>
-          <button
-            type="button"
-            mat-icon-button
-            color="warn"
-            (click)="removePresentacion(i)"
-            matTooltip="Quitar"
-          >
-            <mat-icon>remove_circle</mat-icon>
-          </button>
-        </div>
-      }
-
-      @if (presentacionesArray.length === 0) {
-        <div class="pres-empty">
-          <p>No hay presentaciones. Agregá al menos una.</p>
-        </div>
-      }
-    </div>
-
-    <!-- Sección Precios por tipo de cliente -->
-    <div class="section-title">
-      <span>Precios por tipo de cliente</span>
-      <button type="button" mat-mini-fab color="primary" (click)="addPrecio()">
-        <mat-icon>add</mat-icon>
-      </button>
-    </div>
-
-    @if (precios().length) {
-      <div class="precios-table">
-        <div class="precios-header">
-          <span>Presentación</span>
-          <span>Tipo Cliente</span>
-          <span>Precio</span>
-          <span>Tipo</span>
-          <span>Vigencia</span>
-          <span></span>
-        </div>
-        @for (p of precios(); track p; let i = $index) {
-          <div class="precios-row">
-            <mat-form-field appearance="fill">
-              <mat-label>Presentación</mat-label>
-              <mat-select
-                [(ngModel)]="p.idprodPresenta"
-                (ngModelChange)="onPrecioChange(i)"
-                [ngModelOptions]="{ standalone: true }"
-              >
-                @for (pp of presOptions(); track pp) {
-                  <mat-option [value]="pp.idprodPresenta">
-                    {{ pp.Presentacion?.nombre }}
-                  </mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
-            <mat-form-field appearance="fill">
-              <mat-label>Tipo cliente</mat-label>
-              <mat-select
-                [(ngModel)]="p.idtipoCli"
-                (ngModelChange)="onPrecioChange(i)"
-                [ngModelOptions]="{ standalone: true }"
-              >
-                @for (tc of tiposCliente; track tc) {
-                  <mat-option [value]="tc.idtipoCli">{{ tc.nombre }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
-            <mat-form-field appearance="fill">
-              <mat-label>Precio Q</mat-label>
-              <input
-                matInput
-                type="number"
-                step="0.01"
-                [(ngModel)]="p.precio"
-                (ngModelChange)="onPrecioChange(i)"
-                [ngModelOptions]="{ standalone: true }"
-              />
-            </mat-form-field>
-            <mat-form-field appearance="fill">
-              <mat-label>Tipo</mat-label>
-              <mat-select
-                [(ngModel)]="p.tipoprecio"
-                (ngModelChange)="onPrecioChange(i)"
-                [ngModelOptions]="{ standalone: true }"
-              >
-                <mat-option value="regular">Regular</mat-option>
-                <mat-option value="mayorista">Mayorista</mat-option>
-                <mat-option value="especial">Especial</mat-option>
-              </mat-select>
-            </mat-form-field>
-            <div class="vigencia-fields">
-              <mat-form-field appearance="fill">
-                <mat-label>Desde</mat-label>
-                <input
-                  matInput
-                  [matDatepicker]="dpDesde"
-                  [(ngModel)]="p.fechaefecto"
-                  (ngModelChange)="onPrecioChange(i)"
-                  [ngModelOptions]="{ standalone: true }"
-                />
-                <mat-datepicker-toggle matSuffix [for]="dpDesde"></mat-datepicker-toggle>
-                <mat-datepicker #dpDesde></mat-datepicker>
-              </mat-form-field>
-              <mat-form-field appearance="fill">
-                <mat-label>Hasta</mat-label>
-                <input
-                  matInput
-                  [matDatepicker]="dpHasta"
-                  [(ngModel)]="p.fechafin"
-                  (ngModelChange)="onPrecioChange(i)"
-                  [ngModelOptions]="{ standalone: true }"
-                />
-                <mat-datepicker-toggle matSuffix [for]="dpHasta"></mat-datepicker-toggle>
-                <mat-datepicker #dpHasta></mat-datepicker>
-              </mat-form-field>
-            </div>
-            <button type="button" mat-icon-button color="warn" (click)="removePrecio(i)">
-              <mat-icon>delete</mat-icon>
+              <mat-icon>add</mat-icon>
             </button>
           </div>
-        }
+
+          <div formArrayName="presentaciones" class="pres-grid">
+            @for (
+              pres of presentacionesArray.controls;
+              track pres;
+              let i = $index;
+              let last = $last
+            ) {
+              <div [formGroupName]="i" class="pres-row">
+                <mat-form-field appearance="fill" class="pres-select">
+                  <mat-label>Presentación *</mat-label>
+                  <mat-select formControlName="idpresentacion" required>
+                    <mat-option [value]="null">Seleccionar</mat-option>
+                    @for (p of presentacionesDisponibles(i); track p) {
+                      <mat-option [value]="p._id">{{ p.nombre }}</mat-option>
+                    }
+                  </mat-select>
+                  <mat-error>Requerido</mat-error>
+                </mat-form-field>
+                <mat-form-field appearance="fill" class="pres-qty">
+                  <mat-label>Cant. base</mat-label>
+                  <input
+                    matInput
+                    formControlName="cantidad_base"
+                    type="number"
+                    step="0.01"
+                    placeholder="1"
+                  />
+                </mat-form-field>
+                <mat-form-field appearance="fill" class="pres-price">
+                  <mat-label>Precio venta</mat-label>
+                  <input
+                    matInput
+                    formControlName="precio_venta"
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                  />
+                </mat-form-field>
+                <mat-form-field appearance="fill" class="pres-barcode">
+                  <mat-label>Código barras</mat-label>
+                  <input matInput formControlName="codigo_barras" placeholder="Opcional" />
+                  <button
+                    matSuffix
+                    type="button"
+                    mat-icon-button
+                    (click)="scanBarcode(i)"
+                    matTooltip="Escanear código de barras"
+                    tabindex="-1"
+                  >
+                    <mat-icon>qr_code_scanner</mat-icon>
+                  </button>
+                </mat-form-field>
+                <button
+                  type="button"
+                  mat-icon-button
+                  color="warn"
+                  (click)="removePresentacion(i)"
+                  matTooltip="Quitar"
+                >
+                  <mat-icon>remove_circle</mat-icon>
+                </button>
+              </div>
+            }
+
+            @if (presentacionesArray.length === 0) {
+              <div class="pres-empty">
+                <p>No hay presentaciones. Agregá al menos una.</p>
+              </div>
+            }
+          </div>
+        </div>
+      </mat-tab>
+
+      <!-- Tab 3: Precios por tipo de cliente -->
+      <mat-tab label="Precios por tipo de cliente">
+        <div class="tab-content">
+          <div class="section-title">
+            <span>Precios por tipo de cliente</span>
+            <button type="button" mat-mini-fab color="primary" (click)="addPrecio()">
+              <mat-icon>add</mat-icon>
+            </button>
+          </div>
+
+          @if (precios().length) {
+            <div class="precios-table">
+              <div class="precios-header">
+                <span>Presentación</span>
+                <span>Tipo Cliente</span>
+                <span>Precio</span>
+                <span>Vigencia</span>
+                <span>Estado</span>
+                <span></span>
+              </div>
+              @for (p of preciosOrdenados(); track p) {
+                <div class="precios-row" [class.precio-inactivo]="p.estado === 0">
+                  <mat-form-field appearance="fill">
+                    <mat-label>Presentación</mat-label>
+                    <mat-select
+                      [(ngModel)]="p.idprodPresenta"
+                      (ngModelChange)="onPrecioChange(p)"
+                      [ngModelOptions]="{ standalone: true }"
+                    >
+                      @for (pp of presOptions(); track pp) {
+                        <mat-option [value]="pp.idprodPresenta">
+                          {{ pp.Presentacion?.nombre }}
+                        </mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+                  <mat-form-field appearance="fill">
+                    <mat-label>Tipo cliente</mat-label>
+                    <mat-select
+                      [(ngModel)]="p.idtipoCli"
+                      (ngModelChange)="onPrecioChange(p)"
+                      [ngModelOptions]="{ standalone: true }"
+                    >
+                      @for (tc of tiposCliente; track tc) {
+                        <mat-option [value]="tc.idtipoCli">{{ tc.nombre }}</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+                  <mat-form-field appearance="fill">
+                    <mat-label>Precio Q</mat-label>
+                    <input
+                      matInput
+                      type="number"
+                      step="0.01"
+                      [(ngModel)]="p.precio"
+                      (ngModelChange)="onPrecioChange(p)"
+                      [ngModelOptions]="{ standalone: true }"
+                    />
+                  </mat-form-field>
+                  <div class="vigencia-fields">
+                    <mat-form-field appearance="fill">
+                      <mat-label>Desde</mat-label>
+                      <input
+                        matInput
+                        [matDatepicker]="dpDesde"
+                        [(ngModel)]="p.fechaefecto"
+                        (ngModelChange)="onPrecioChange(p)"
+                        [ngModelOptions]="{ standalone: true }"
+                      />
+                      <mat-datepicker-toggle matSuffix [for]="dpDesde"></mat-datepicker-toggle>
+                      <mat-datepicker #dpDesde></mat-datepicker>
+                    </mat-form-field>
+                    <mat-form-field appearance="fill">
+                      <mat-label>Hasta</mat-label>
+                      <input
+                        matInput
+                        [matDatepicker]="dpHasta"
+                        [(ngModel)]="p.fechafin"
+                        (ngModelChange)="onPrecioChange(p)"
+                        [ngModelOptions]="{ standalone: true }"
+                      />
+                      <mat-datepicker-toggle matSuffix [for]="dpHasta"></mat-datepicker-toggle>
+                      <mat-datepicker #dpHasta></mat-datepicker>
+                    </mat-form-field>
+                  </div>
+                  <span class="precio-estado-badge" [class.inactivo]="p.estado === 0">
+                    {{ p.estado === 0 ? 'Inactivo' : 'Activo' }}
+                  </span>
+                  <button type="button" mat-icon-button color="warn" (click)="removePrecio(p)">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </div>
+              }
+            </div>
+          }
+
+          @if (!precios().length) {
+            <div class="empty-precios">
+              <p>
+                No hay precios especiales configurados. Se usará <strong>precio_venta</strong>
+                como predeterminado.
+              </p>
+            </div>
+          }
+        </div>
+      </mat-tab>
+      </mat-tab-group>
+
+      <div class="form-actions">
+        <button mat-button type="button" (click)="goBack()">Cancelar</button>
+        <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid">
+          {{ data ? 'Actualizar' : 'Crear' }}
+        </button>
       </div>
-    }
-
-    @if (!precios().length) {
-      <div class="empty-precios">
-        <p>
-          No hay precios especiales configurados. Se usará <strong>precio_venta</strong> como
-          predeterminado.
-        </p>
-      </div>
-    }
-
-    <div class="toggle-row">
-      <mat-slide-toggle formControlName="estado" color="primary">
-        {{ form.get('estado')?.value ? 'Activo' : 'Inactivo' }}
-      </mat-slide-toggle>
-    </div>
-  </mat-dialog-content>
-
-  <mat-dialog-actions align="end">
-    <button mat-button type="button" mat-dialog-close>Cancelar</button>
-    <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid">
-      {{ data ? 'Actualizar' : 'Crear' }}
-    </button>
-  </mat-dialog-actions>
-</form>
+    </form>
+  </mat-card-content>
+</mat-card>

@@ -23,7 +23,7 @@ import { SucursalService } from '../../core/services/sucursal.service';
 
         <div class="ticket-info">
           <div class="info-row">
-            <span class="label">Ticket:</span><span class="value">{{ venta.nombre }}</span>
+            <span class="label">Ticket:</span><span class="value">{{ venta.referencia || venta.nombre }}</span>
           </div>
           <div class="info-row">
             <span class="label">Fecha:</span
@@ -34,7 +34,7 @@ import { SucursalService } from '../../core/services/sucursal.service';
           <div class="info-row">
             <span class="label">Cliente:</span
             ><span class="value"
-              >{{ venta.Cliente?.nombres || 'Mostrador' }}
+              >{{ venta.Cliente?.nombres || 'Consumidor Final' }}
               {{ venta.Cliente?.apellidos || '' }}</span
             >
           </div>

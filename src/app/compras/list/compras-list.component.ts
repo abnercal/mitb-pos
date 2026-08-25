@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -13,11 +14,12 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { BaseListComponent } from '../../shared/components/base-list/base-list';
-import { CompraService } from '../../core/services/compra.service';
+import { CompraService, RegistrarPagoCompraBody } from '../../core/services/compra.service';
 import { Compra } from '../../core/interfaces/compra.interface';
-import { CompraFormComponent } from '../form/compra-form.component';
+import CompraFormComponent from '../form/compra-form.component';
 import { DetalleDialog, DetalleItem } from '../../shared/components/detalle-dialog.component';
 import { ConfirmDeleteDialog } from '../../shared/components/confirm-delete-dialog';
+import { RegistrarPagoCompraDialog } from '../dialogs/registrar-pago-compra-dialog';
 import { Observable, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 
@@ -72,6 +74,16 @@ import { catchError } from 'rxjs/operators';
               </mat-chip>
             </td>
           </ng-container>
+          <ng-container matColumnDef="saldo">
+            <th mat-header-cell *matHeaderCellDef>Saldo pendiente</th>
+            <td mat-cell *matCellDef="let item">
+              @if (!item.estado) {
+                <span class="muted">N/A</span>
+              } @else {
+                <strong>Q {{ (item.saldoPendiente ?? 0) | number:'.2' }}</strong>
+              }
+            </td>
+          </ng-container>
           <ng-container matColumnDef="detalle">
             <th mat-header-cell *matHeaderCellDef></th>
             <td mat-cell *matCellDef="let item">
@@ -81,7 +93,12 @@ import { catchError } from 'rxjs/operators';
           <ng-container matColumnDef="acciones">
             <th mat-header-cell *matHeaderCellDef>Acciones</th>
             <td mat-cell *matCellDef="let item">
-              <button mat-icon-button color="warn" (click)="anular(item)" matTooltip="Anular"><mat-icon>cancel</mat-icon></button>
+              @if (item.estado) {
+                <button mat-icon-button color="primary" (click)="registrarAbono(item)" matTooltip="Registrar abono">
+                  <mat-icon>payments</mat-icon>
+                </button>
+                <button mat-icon-button color="warn" (click)="anular(item)" matTooltip="Anular"><mat-icon>cancel</mat-icon></button>
+              }
             </td>
           </ng-container>
           <tr mat-header-row *matHeaderRowDef="columns"></tr>
@@ -106,6 +123,7 @@ import { catchError } from 'rxjs/operators';
     .page-header h1 { margin: 0; font-size: 24px; font-weight: 500; }
     .search-field { width: 100%; max-width: 400px; margin: 16px 0 0 16px; }
     .full-table { width: 100%; }
+    .muted { color: var(--mat-sys-on-surface-variant); }
     .empty-state { display: flex; flex-direction: column; align-items: center; padding: 40px; color: var(--mat-sys-on-surface-variant); }
     .empty-state mat-icon { font-size: 48px; width: 48px; height: 48px; margin-bottom: 12px; }
   `],
@@ -115,13 +133,19 @@ export default class ComprasListComponent extends BaseListComponent<Compra> {
   override entityName = 'compras';
   override formComponent = CompraFormComponent;
   override dialogWidth = '750px';
-  override columns = ['nombre', 'proveedor', 'fecha', 'total', 'estado', 'detalle', 'acciones'];
+  override columns = ['nombre', 'proveedor', 'fecha', 'total', 'estado', 'saldo', 'detalle', 'acciones'];
 
   readonly searchTerm = signal('');
 
   private readonly compraService = inject(CompraService);
   private readonly dialog2 = inject(MatDialog);
   private readonly snackBar2 = inject(MatSnackBar);
+  private readonly router = inject(Router);
+
+  /** Compras usa una página completa (ruteada) para crear en vez del modal de dos viñetas — mismo criterio que Ventas y Productos. */
+  override openCreate(): void {
+    this.router.navigate(['/compras/nueva']);
+  }
 
   protected override buildParams(): { page: number; limit: number; search: string } {
     return { page: this.pageIndex() + 1, limit: this.pageSize(), search: this.searchTerm() };
@@ -159,11 +183,26 @@ export default class ComprasListComponent extends BaseListComponent<Compra> {
     });
     ref.afterClosed().subscribe(confirmed => {
       if (!confirmed) return;
-      this.compraService.anular(item._id!).pipe(catchError(() => {
-        this.snackBar2.open('Error al anular compra', 'Cerrar', { duration: 3000 });
+      this.compraService.anular(item._id!).subscribe({
+        next: () => {
+          this.snackBar2.open('Compra anulada', 'Cerrar', { duration: 2000 });
+          this.load();
+        },
+        error: (err) => this.snackBar2.open(err?.error?.message || 'Error al anular compra', 'Cerrar', { duration: 4000 }),
+      });
+    });
+  }
+
+  registrarAbono(item: Compra): void {
+    const ref = this.dialog2.open(RegistrarPagoCompraDialog, { width: '420px', data: { compra: item } });
+    ref.afterClosed().subscribe((body: RegistrarPagoCompraBody | undefined) => {
+      if (!body) return;
+      this.compraService.registrarPago(item._id!, body).pipe(catchError((err) => {
+        this.snackBar2.open(err?.error?.message || 'Error al registrar abono', 'Cerrar', { duration: 3000 });
         return of(undefined);
-      })).subscribe(() => {
-        this.snackBar2.open('Compra anulada', 'Cerrar', { duration: 2000 });
+      })).subscribe((result) => {
+        if (result === undefined) return;
+        this.snackBar2.open('Abono registrado', 'Cerrar', { duration: 2000 });
         this.load();
       });
     });

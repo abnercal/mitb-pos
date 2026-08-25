@@ -92,11 +92,11 @@ import { Proveedor } from '../core/interfaces/proveedor.interface';
           <table mat-table [dataSource]="recentSales()" class="full-table">
             <ng-container matColumnDef="nombre">
               <th mat-header-cell *matHeaderCellDef>Referencia</th>
-              <td mat-cell *matCellDef="let item">{{ item.nombre }}</td>
+              <td mat-cell *matCellDef="let item">{{ item.referencia || item.nombre }}</td>
             </ng-container>
             <ng-container matColumnDef="cliente">
               <th mat-header-cell *matHeaderCellDef>Cliente</th>
-              <td mat-cell *matCellDef="let item">{{ item.Cliente?.nombres || 'Mostrador' }}</td>
+              <td mat-cell *matCellDef="let item">{{ item.nombre || item.Cliente?.nombres || 'Consumidor Final' }}</td>
             </ng-container>
             <ng-container matColumnDef="total">
               <th mat-header-cell *matHeaderCellDef>Total</th>

@@ -12,6 +12,7 @@ import { AuthService } from '../core/services/auth.service';
 import { PrecioService } from '../core/services/precio.service';
 import { AppEventsService } from '../core/services/app-events.service';
 import { TipoPagoService } from '../core/services/tipo-pago.service';
+import { TipoClienteService } from '../core/services/tipo-cliente.service';
 import type { Producto } from '../core/interfaces/producto.interface';
 import type { ProductoPresentacion } from '../core/interfaces/producto-presentacion.interface';
 
@@ -68,8 +69,8 @@ describe('PosComponent', () => {
   let component: PosComponent;
   let fixture: ComponentFixture<PosComponent>;
   let productoService: { getAllList: ReturnType<typeof vi.fn> };
-  let ventaService: { create: ReturnType<typeof vi.fn> };
-  let precioService: { getByPresentacion: ReturnType<typeof vi.fn> };
+  let ventaService: { create: ReturnType<typeof vi.fn>; getNextCode: ReturnType<typeof vi.fn> };
+  let precioService: { getByPresentacion: ReturnType<typeof vi.fn>; getAllList: ReturnType<typeof vi.fn> };
   let authService: { getSession: ReturnType<typeof vi.fn> };
   let appEvents: { notifySaleCompleted: ReturnType<typeof vi.fn>; saleCompleted$: Subject<void> };
   let snackBar: { open: ReturnType<typeof vi.fn> };
@@ -77,8 +78,8 @@ describe('PosComponent', () => {
 
   beforeEach(() => {
     productoService = { getAllList: vi.fn().mockReturnValue(of([mockProducto, mockProducto2])) };
-    ventaService = { create: vi.fn() };
-    precioService = { getByPresentacion: vi.fn() };
+    ventaService = { create: vi.fn(), getNextCode: vi.fn().mockReturnValue(of({ codigo: 'V-001' })) };
+    precioService = { getByPresentacion: vi.fn(), getAllList: vi.fn().mockReturnValue(of([])) };
     authService = {
       getSession: vi.fn().mockReturnValue({ token: 'x', user: { id: 1, idsucursal: 1 } }),
     };
@@ -97,6 +98,7 @@ describe('PosComponent', () => {
         { provide: ClienteService, useValue: { getAllList: () => of([]) } },
         { provide: VentaService, useValue: ventaService },
         { provide: TipoPagoService, useValue: { getAll: () => of([]) } },
+        { provide: TipoClienteService, useValue: { getAll: () => of([]) } },
         { provide: PrecioService, useValue: precioService },
         { provide: AuthService, useValue: authService },
         { provide: AppEventsService, useValue: appEvents },
@@ -124,6 +126,36 @@ describe('PosComponent', () => {
   it('should clear pending sale state on init', () => {
     expect(component.hasPendingSale()).toBe(false);
     expect(component.loading()).toBe(false);
+  });
+
+  // ── precioResuelto (catálogo según "Tipo de venta") ────
+
+  describe('precioResuelto()', () => {
+    it('should show precio_venta when no tipo de venta is selected', () => {
+      component.selectedTipoCliVentaId = null;
+      expect(component.precioResuelto(mockPresentacion)).toBe(25.5);
+    });
+
+    it('should show the specific tipo price when one is selected and exists', () => {
+      component.allPrecios.set([
+        { idprecios: 1, precio: 20, tipoprecio: 'minorista', idprodPresenta: 10, idtipoCli: 2 },
+        { idprecios: 2, precio: 18, tipoprecio: 'mayorista', idprodPresenta: 10, idtipoCli: 1 },
+      ]);
+
+      component.selectedTipoCliVentaId = 2;
+      expect(component.precioResuelto(mockPresentacion)).toBe(20);
+
+      component.selectedTipoCliVentaId = 1;
+      expect(component.precioResuelto(mockPresentacion)).toBe(18);
+    });
+
+    it('should fall back to precio_venta when the tipo has no specific price row', () => {
+      component.allPrecios.set([
+        { idprecios: 1, precio: 20, tipoprecio: 'minorista', idprodPresenta: 999, idtipoCli: 2 },
+      ]);
+      component.selectedTipoCliVentaId = 2;
+      expect(component.precioResuelto(mockPresentacion)).toBe(25.5);
+    });
   });
 
   // ── cartTotal ─────────────────────────────────────────
@@ -256,16 +288,45 @@ describe('PosComponent', () => {
       expect(component.cartItems().length).toBe(2);
     });
 
-    it('should fetch client-specific price when client is selected', () => {
+    it('should resolve price using the tipo de venta control (auto-set from selected client)', () => {
       const mockCliente = { _id: 42, nombres: 'Test', idtipoCli: 5, estado: 1 };
       component.clientes = [mockCliente];
-      component.selectedClientId = 42;
-      precioService.getByPresentacion = vi.fn().mockReturnValue(
-        of({ precio: 22, fuente: 'precio_especifico', tipoprecio: 'mayorista' }),
-      );
+      component.tiposCliente = [{ idtipoCli: 5, nombre: 'Mayorista' }];
+      component.allPrecios.set([
+        { idprecios: 1, precio: 22, tipoprecio: 'mayorista', idprodPresenta: 10, idtipoCli: 5 },
+      ]);
+      component.onClientChange(42);
 
       (component as any).addToCart(mockProducto, mockPresentacion);
-      expect(precioService.getByPresentacion).toHaveBeenCalledWith(10, 5);
+      expect(component.cartItems()[0].precio).toBe(22);
+      expect(component.cartItems()[0].tipoprecio).toBe('Mayorista');
+    });
+
+    it('should resolve price using an override tipo de venta independent of the selected client', () => {
+      const mockCliente = { _id: 42, nombres: 'Test', idtipoCli: 5, estado: 1 };
+      component.clientes = [mockCliente];
+      component.tiposCliente = [
+        { idtipoCli: 5, nombre: 'Mayorista' },
+        { idtipoCli: 9, nombre: 'Especial' },
+      ];
+      component.allPrecios.set([
+        { idprecios: 2, precio: 30, tipoprecio: 'especial', idprodPresenta: 10, idtipoCli: 9 },
+      ]);
+      component.onClientChange(42);
+      component.selectedTipoCliVentaId = 9; // override manual, distinto del cliente
+
+      (component as any).addToCart(mockProducto, mockPresentacion);
+      expect(component.cartItems()[0].precio).toBe(30);
+      expect(component.cartItems()[0].tipoprecio).toBe('Especial');
+    });
+
+    it('should fall back to precio_venta when no specific price exists for the chosen tipo', () => {
+      component.selectedTipoCliVentaId = 5;
+      component.allPrecios.set([]);
+
+      (component as any).addToCart(mockProducto, mockPresentacion);
+      expect(component.cartItems()[0].precio).toBe(25.5);
+      expect(component.cartItems()[0].tipoprecio).toBeUndefined();
     });
   });
 

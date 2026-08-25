@@ -10,6 +10,7 @@ export interface Producto {
   idunidad?: number;
   estado: number;
   stock_minimo?: number;
+  controla_vencimiento?: boolean;
   Marca?: { nombre: string };
   Categoria?: { nombre: string };
   Unidad?: { nombre: string };

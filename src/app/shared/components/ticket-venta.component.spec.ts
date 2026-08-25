@@ -146,7 +146,7 @@ describe('TicketVentaComponent', () => {
     });
   });
 
-  describe('Mostrador (no cliente)', () => {
+  describe('Consumidor Final (no cliente)', () => {
     beforeEach(() => {
       TestBed.configureTestingModule({
         imports: [TicketVentaComponent],
@@ -163,9 +163,9 @@ describe('TicketVentaComponent', () => {
       fixture.detectChanges();
     });
 
-    it('should show Mostrador when no Cliente', () => {
+    it('should show Consumidor Final when no Cliente', () => {
       const compiled = fixture.nativeElement as HTMLElement;
-      expect(compiled.textContent).toContain('Mostrador');
+      expect(compiled.textContent).toContain('Consumidor Final');
     });
 
     it('should hide Cliente apellidos when no Cliente', () => {

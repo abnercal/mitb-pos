@@ -8,6 +8,7 @@ import { VentaService } from '../../core/services/venta.service';
 import { ClienteService } from '../../core/services/cliente.service';
 import { ProductoService } from '../../core/services/producto.service';
 import { AuthService } from '../../core/services/auth.service';
+import { PrecioService } from '../../core/services/precio.service';
 import type { Producto } from '../../core/interfaces/producto.interface';
 import type { ProductoPresentacion } from '../../core/interfaces/producto-presentacion.interface';
 
@@ -48,6 +49,7 @@ describe('VentaFormComponent', () => {
   let dialogRef: { close: ReturnType<typeof vi.fn>; afterClosed: ReturnType<typeof vi.fn> };
   let snackBar: { open: ReturnType<typeof vi.fn> };
   let authService: { getSession: ReturnType<typeof vi.fn> };
+  let precioService: { getByPresentacion: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     ventaService = {
@@ -64,6 +66,9 @@ describe('VentaFormComponent', () => {
     authService = {
       getSession: vi.fn().mockReturnValue({ token: 'x', user: { id: 1, idsucursal: 1 } }),
     };
+    precioService = {
+      getByPresentacion: vi.fn().mockReturnValue(of({ precio: 0, fuente: 'precio_venta' })),
+    };
 
     localStorage.clear();
 
@@ -75,6 +80,7 @@ describe('VentaFormComponent', () => {
         { provide: ClienteService, useValue: clienteService },
         { provide: ProductoService, useValue: productoService },
         { provide: AuthService, useValue: authService },
+        { provide: PrecioService, useValue: precioService },
         { provide: MatDialogRef, useValue: dialogRef },
         { provide: MAT_DIALOG_DATA, useValue: {} },
       ],
@@ -227,7 +233,9 @@ describe('VentaFormComponent', () => {
 
       expect(ventaService.create).toHaveBeenCalledTimes(1);
       const payload = ventaService.create.mock.calls[0][0];
-      expect(payload.nombre).toBe('V-001');
+      // Sin cliente elegido y sin nombre escrito a mano: no se manda `nombre`
+      // — el backend resuelve solo contra "Consumidor Final".
+      expect(payload.nombre).toBeUndefined();
       expect(payload.total).toBe(51);
       expect(payload.detalles.length).toBe(1);
       expect(payload.pago.importe).toBe(51);

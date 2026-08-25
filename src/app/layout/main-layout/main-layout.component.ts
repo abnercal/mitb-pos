@@ -196,6 +196,7 @@ export default class MainLayoutComponent {
     },
     { icon: 'local_shipping', label: 'Proveedores', route: '/proveedores', feature: 'proveedores' },
     { icon: 'shopping_cart', label: 'Compras', route: '/compras', feature: 'compras' },
+    { icon: 'event_busy', label: 'Lotes por vencer', route: '/lotes', feature: 'lotes' },
     { icon: 'store', label: 'Sucursales', route: '/sucursales', feature: 'sucursales' },
     { icon: 'people', label: 'Usuarios', route: '/usuarios', feature: 'usuarios' },
     { icon: 'admin_panel_settings', label: 'Roles', route: '/roles', feature: 'roles' },

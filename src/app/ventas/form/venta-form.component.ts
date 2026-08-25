@@ -8,11 +8,14 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTabsModule } from '@angular/material/tabs';
 import { VentaService } from '../../core/services/venta.service';
 import { ClienteService } from '../../core/services/cliente.service';
 import { ProductoService } from '../../core/services/producto.service';
 import { AuthService } from '../../core/services/auth.service';
+import { PrecioService } from '../../core/services/precio.service';
 import { Cliente } from '../../core/interfaces/cliente.interface';
 import { Producto } from '../../core/interfaces/producto.interface';
 
@@ -40,16 +43,18 @@ interface DetalleVenta {
   imports: [
     CommonModule, FormsModule, ReactiveFormsModule, MatDialogModule, MatFormFieldModule,
     MatInputModule, MatSelectModule, MatButtonModule, MatIconModule,
-    MatTableModule, MatSnackBarModule,
+    MatTableModule, MatCheckboxModule, MatSnackBarModule, MatTabsModule,
   ],
   templateUrl: './venta-form.component.html',
   styles: [`
+    .tab-content { padding: 20px 4px 4px; }
     .form-row { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
     .flex-1 { flex: 1; } .flex-2 { flex: 2; }
     .detalle-row { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
     .full-table { width: 100%; margin: 8px 0; }
     .total-row { text-align: right; font-size: 18px; margin-top: 16px; padding: 12px; background: var(--mat-sys-surface-container); border-radius: 4px; }
     .empty-detalle { text-align: center; padding: 20px; color: var(--mat-sys-on-surface-variant); }
+    .cotizacion-row { margin: 4px 0 20px; }
   `],
 })
 export class VentaFormComponent implements OnInit {
@@ -60,6 +65,7 @@ export class VentaFormComponent implements OnInit {
   private readonly dialogRef = inject(MatDialogRef<VentaFormComponent>);
   private readonly snackBar = inject(MatSnackBar);
   private readonly authService = inject(AuthService);
+  private readonly precioService = inject(PrecioService);
 
   /** Si se cerró con submit (true) o sin submit (falsy) */
   private submitted = false;
@@ -68,14 +74,25 @@ export class VentaFormComponent implements OnInit {
   readonly productos = signal<Producto[]>([]);
 
   readonly nextCode = signal<string | null>(null);
+  nombreCliente = '';
+  /** Si se marca, la venta se crea como Cotización (no descuenta inventario ni crea Pago). */
+  esCotizacion = false;
+
+  get isCFSelected(): boolean {
+    const idcliente = this.form.get('idcliente')?.value;
+    if (idcliente == null) return false;
+    const c = this.clientes.find(cl => cl._id === idcliente);
+    return c?.nit === 'CF';
+  }
 
   private _selectedPres: PresOption | null = null;
   get selectedPres(): PresOption | null { return this._selectedPres; }
   set selectedPres(val: PresOption | null) {
     this._selectedPres = val;
-    if (val) this.newPrecio = val.precioVenta;
+    this.resolvePrecio();
   }
   newCantidad = 1;
+  /** Precio resuelto por el servidor (solo lectura) — el backend ignora cualquier precio enviado. */
   newPrecio = 0;
 
   readonly detalles = signal<DetalleVenta[]>([]);
@@ -111,6 +128,7 @@ export class VentaFormComponent implements OnInit {
         localStorage.setItem(PENDING_VENTA_KEY, JSON.stringify({
           detalles: d,
           idcliente: this.form.get('idcliente')?.value ?? null,
+          nombreCliente: this.nombreCliente,
         }));
       } else {
         localStorage.removeItem(PENDING_VENTA_KEY);
@@ -180,7 +198,8 @@ export class VentaFormComponent implements OnInit {
     const v = this.form.getRawValue();
     const totalCalculado = this.total();
     this.service.create({
-      nombre: this.nextCode() ?? '',
+      referencia: this.nextCode() ?? undefined,
+      nombre: this.nombreCliente || undefined,
       idcliente: v.idcliente || undefined,
       idsucursal: session.user.idsucursal ?? undefined,
       idusuario: session.user.id,
@@ -191,20 +210,67 @@ export class VentaFormComponent implements OnInit {
         precio: d.precio,
       })),
       pago: { idtipopago: 3, importe: totalCalculado, estado: 'pagado' },
+      esCotizacion: this.esCotizacion,
     }).subscribe({
       next: () => {
         this.submitted = true;
         localStorage.removeItem(PENDING_VENTA_KEY);
-        this.snackBar.open('Venta registrada', 'Cerrar', { duration: 2000 });
+        this.snackBar.open(
+          this.esCotizacion ? 'Cotización registrada' : 'Venta registrada',
+          'Cerrar', { duration: 2000 },
+        );
         this.dialogRef.close(true);
       },
-      error: () => this.snackBar.open('Error al registrar venta', 'Cerrar', { duration: 3000 }),
+      error: (err) => this.snackBar.open(err.error?.message || 'Error al registrar venta', 'Cerrar', { duration: 5000 }),
+    });
+  }
+
+  onClienteChange(idcliente: number | null): void {
+    if (idcliente == null) {
+      this.nombreCliente = '';
+    } else {
+      const c = this.clientes.find(cl => cl._id === idcliente);
+      this.nombreCliente = [c?.nombres, c?.apellidos].filter(Boolean).join(' ');
+    }
+    // Si ya hay una presentación elegida, el precio depende del cliente — se re-resuelve.
+    this.resolvePrecio();
+  }
+
+  /** idtipoCli del Cliente elegido en el formulario (o undefined si no hay cliente elegido). */
+  private resolveIdTipoCli(): number | undefined {
+    const idcliente = this.form.get('idcliente')?.value;
+    if (idcliente == null) return undefined;
+    const c = this.clientes.find(cl => cl._id === idcliente);
+    return c?.idtipoCli ?? undefined;
+  }
+
+  /**
+   * Resuelve `newPrecio` vía PrecioService.getByPresentacion — mismo patrón que
+   * pos.component.ts. El campo es de solo lectura: el backend ignora el `precio`
+   * enviado y siempre cobra el que él mismo resuelve.
+   */
+  private resolvePrecio(): void {
+    const pres = this._selectedPres;
+    if (!pres) {
+      this.newPrecio = 0;
+      return;
+    }
+    const idtipoCli = this.resolveIdTipoCli();
+    if (idtipoCli == null) {
+      this.newPrecio = pres.precioVenta;
+      return;
+    }
+    this.precioService.getByPresentacion(pres.idprodPresenta, idtipoCli).subscribe({
+      next: (res) => { this.newPrecio = Number(res.precio); },
+      error: () => { this.newPrecio = pres.precioVenta; },
     });
   }
 
   clearForm(): void {
     this.detalles.set([]);
     this.form.reset({ idcliente: null });
+    this.nombreCliente = '';
+    this.esCotizacion = false;
     localStorage.removeItem(PENDING_VENTA_KEY);
   }
 }

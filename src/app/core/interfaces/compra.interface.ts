@@ -4,12 +4,21 @@ export interface CompraDetalle {
   costo: number;
   idprodPresenta: number;
   idcompra?: string;
+  fecha_vencimiento?: string | null;
   ProductoPresentacion?: {
     idprodPresenta: number;
     cantidad_base: number;
-    Producto?: { codigoprod: number; nombre: string };
+    Producto?: { codigoprod: number; nombre: string; controla_vencimiento?: boolean };
     Presentacion?: { idpresentacion: number; nombre: string };
   };
+}
+
+export interface CompraPago {
+  idpagos_compra: number;
+  importe: number;
+  idtipopago: number;
+  estado: string;
+  fecha_pago: string;
 }
 
 export interface Compra {
@@ -22,6 +31,9 @@ export interface Compra {
   total?: number;
   idusuario?: number;
   idsucursal?: number;
+  fecha_limite_pago?: string | null;
+  saldoPendiente?: number;
+  Pagos?: CompraPago[];
   Proveedor?: { _id: number; nombre: string };
   Sucursal?: { _id: number; nombre: string };
   Usuario?: { _id: number; nombre: string };

@@ -1,0 +1,175 @@
+<div class="page-header">
+  <button mat-icon-button (click)="goBack()" matTooltip="Volver a ventas">
+    <mat-icon>arrow_back</mat-icon>
+  </button>
+  <h1>Nueva venta</h1>
+</div>
+
+<div class="venta-layout">
+  <!-- Catálogo -->
+  <div class="venta-products">
+    <div class="search-bar">
+      <mat-icon class="search-icon">search</mat-icon>
+      <input
+        class="search-input"
+        [(ngModel)]="searchTerm"
+        placeholder="Buscá producto por nombre, código o marca…"
+      />
+      @if (searchTerm()) {
+        <button mat-icon-button (click)="searchTerm.set('')" class="clear-btn">
+          <mat-icon>close</mat-icon>
+        </button>
+      }
+    </div>
+
+    @if (searchTerm()) {
+      <div class="product-count">
+        {{ filteredProducts().length }} producto{{ filteredProducts().length !== 1 ? 's' : '' }}
+        encontrado{{ filteredProducts().length !== 1 ? 's' : '' }}
+      </div>
+    }
+
+    @if (loading()) {
+      <div class="product-sk-grid">
+        @for (_ of [1, 2, 3, 4, 5, 6]; track _) {
+          <div class="product-sk-card">
+            <div class="sk-line sk-line--name pulse"></div>
+            <div class="sk-line sk-line--brand pulse"></div>
+            <div class="sk-line sk-line--price pulse"></div>
+          </div>
+        }
+      </div>
+    } @else if (productsError()) {
+      <div class="products-error">
+        <mat-icon>error_outline</mat-icon>
+        <p>{{ productsError() }}</p>
+        <button mat-button color="primary" (click)="loadProducts()">Reintentar</button>
+      </div>
+    } @else {
+      <div class="product-grid">
+        @for (p of filteredProducts(); track p) {
+          <button class="product-card" (click)="selectProduct(p)">
+            <span class="prod-name">{{ p.nombre }}</span>
+            <span class="prod-marca">{{ p.Marca?.nombre || '' }}</span>
+            @if (p.Presentaciones && p.Presentaciones.length === 1) {
+              <span class="prod-price">Q {{ precioResuelto(p.Presentaciones[0]) | number: '.2' }}</span>
+            }
+            @if (!p.Presentaciones || p.Presentaciones.length !== 1) {
+              <span class="prod-pres-count">
+                {{ p.Presentaciones?.length || 0 }} presentacione{{ (p.Presentaciones?.length || 0) !== 1 ? 's' : '' }}
+              </span>
+            }
+          </button>
+        }
+      </div>
+
+      @if (!filteredProducts().length && searchTerm()) {
+        <div class="empty-search">
+          <mat-icon>search_off</mat-icon>
+          <p>No se encontraron productos para "{{ searchTerm() }}"</p>
+        </div>
+      }
+    }
+  </div>
+
+  <!-- Panel de venta -->
+  <div class="venta-panel">
+    <div class="panel-header">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Referencia</mat-label>
+        <input matInput [value]="nextCode()" disabled placeholder="Generando..." />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Cliente</mat-label>
+        <mat-select [value]="selectedClienteId" (selectionChange)="onClienteChange($event.value)">
+          <mat-option [value]="null">Consumidor Final (sin cliente)</mat-option>
+          @for (c of clientes; track c) {
+            <mat-option [value]="c._id">{{ c.nombres }} {{ c.apellidos }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      @if (isCFSelected) {
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Nombre del cliente</mat-label>
+          <input matInput [(ngModel)]="nombreCliente" placeholder="Nombre para esta venta" />
+        </mat-form-field>
+      }
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Tipo de venta</mat-label>
+        <mat-select
+          [(value)]="selectedTipoVentaId"
+          (selectionChange)="onTipoVentaChange()"
+          matTooltip="Define el precio aplicado a TODOS los productos listados (mayorista/minorista)"
+        >
+          <mat-option [value]="null">Sin tipo especial (precio base)</mat-option>
+          @for (t of tiposCliente; track t) {
+            <mat-option [value]="t.idtipoCli">{{ t.nombre }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-checkbox [(ngModel)]="esCotizacion" class="cotizacion-check">
+        Guardar como cotización (no descuenta inventario)
+      </mat-checkbox>
+    </div>
+
+    <div class="panel-divider"></div>
+
+    <div class="detalle-items">
+      @if (!detalles().length) {
+        <div class="empty-detalle">
+          <mat-icon>add_shopping_cart</mat-icon>
+          <p>Elegí productos del catálogo</p>
+        </div>
+      }
+      @for (item of detalles(); track item; let i = $index) {
+        <div class="detalle-item">
+          <div class="item-info">
+            <span class="item-name">{{ item.nombre }}</span>
+            <span class="item-pres">{{ item.presentacion }}</span>
+          </div>
+          <div class="item-controls">
+            <button mat-icon-button (click)="updateCantidad(i, item.cantidad - 1)" class="qty-btn">
+              <mat-icon>remove</mat-icon>
+            </button>
+            <span class="item-qty">{{ item.cantidad }}</span>
+            <button mat-icon-button (click)="updateCantidad(i, item.cantidad + 1)" class="qty-btn">
+              <mat-icon>add</mat-icon>
+            </button>
+            <span class="item-subtotal">Q {{ item.cantidad * item.precio | number: '.2' }}</span>
+            <button mat-icon-button (click)="removeDetalle(i)" class="remove-btn">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+
+    <div class="panel-divider"></div>
+
+    <div class="panel-footer">
+      <div class="panel-total">
+        <span>Total</span>
+        <span class="total-amount">Q {{ total() | number: '.2' }}</span>
+      </div>
+      <div class="panel-actions">
+        @if (detalles().length) {
+          <button mat-stroked-button type="button" (click)="clearForm()">Limpiar</button>
+        }
+        <button
+          mat-raised-button
+          color="primary"
+          class="submit-btn"
+          [disabled]="!detalles().length"
+          (click)="submit()"
+        >
+          <mat-icon>{{ esCotizacion ? 'description' : 'point_of_sale' }}</mat-icon>
+          {{ esCotizacion ? 'Registrar cotización' : 'Registrar venta' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

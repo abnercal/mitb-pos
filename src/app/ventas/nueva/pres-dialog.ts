@@ -2,25 +2,30 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
 import { Producto } from '../../core/interfaces/producto.interface';
 import { ProductoPresentacion } from '../../core/interfaces/producto-presentacion.interface';
 
+/**
+ * Selector de presentación para productos con más de una — separado del
+ * equivalente en pos/dialogs/pres-dialog.ts a pedido explícito: esta pantalla
+ * (Ventas > Nueva venta) no depende del POS. La diferencia real es que acá
+ * el precio mostrado por presentación ya viene resuelto según el "Tipo de
+ * venta" elegido en el encabezado (mayorista/minorista), no el precio_venta
+ * base — se lo pasamos resuelto desde el caller vía `resolvePrecio`.
+ */
 @Component({
-  selector: 'app-pos-pres-dialog',
+  selector: 'app-venta-nueva-pres-dialog',
   standalone: true,
-  imports: [CommonModule, MatDialogModule, MatButtonModule, MatIconModule],
+  imports: [CommonModule, MatDialogModule, MatButtonModule],
   template: `
     <h2 mat-dialog-title>{{ data.producto.nombre }}</h2>
     <mat-dialog-content>
-      <p class="pres-hint">Elegí la presentación para agregar al carrito:</p>
+      <p class="pres-hint">Elegí la presentación para agregar a la venta:</p>
       <div class="pres-list">
         @for (pp of data.presentaciones; track pp) {
           <button class="pres-btn" (click)="select(pp)">
             <span class="pres-name">{{ pp.Presentacion?.nombre || 'Presentación' }}</span>
-            <span class="pres-qty"
-              >x{{ pp.cantidad_base }} {{ data.producto.Unidad?.nombre || 'unid' }}</span
-            >
+            <span class="pres-qty">x{{ pp.cantidad_base }}</span>
             <span class="pres-price">Q {{ data.resolvePrecio(pp) | number: '.2' }}</span>
           </button>
         }
@@ -78,14 +83,13 @@ import { ProductoPresentacion } from '../../core/interfaces/producto-presentacio
     `,
   ],
 })
-export class PosPresDialog {
+export class VentaNuevaPresDialog {
   readonly data = inject<{
     producto: Producto;
     presentaciones: ProductoPresentacion[];
-    /** Precio de la presentación según el "Tipo de venta" elegido — mismo criterio que las tarjetas del catálogo. */
     resolvePrecio: (pp: ProductoPresentacion) => number;
   }>(MAT_DIALOG_DATA);
-  private readonly dialogRef = inject(MatDialogRef<PosPresDialog>);
+  private readonly dialogRef = inject(MatDialogRef<VentaNuevaPresDialog>);
 
   select(pp: ProductoPresentacion): void {
     this.dialogRef.close(pp);

@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -11,6 +12,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatPaginatorModule } from '@angular/material/paginator';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { BaseListComponent } from '../../shared/components/base-list/base-list';
 import { ProductoService } from '../../core/services/producto.service';
 import { Producto } from '../../core/interfaces/producto.interface';
@@ -32,6 +34,7 @@ import { Observable } from 'rxjs';
     MatDialogModule,
     MatSnackBarModule,
     MatPaginatorModule,
+    MatTooltipModule,
   ],
   template: `
     <div class="page-header">
@@ -65,7 +68,18 @@ import { Observable } from 'rxjs';
             </ng-container>
             <ng-container matColumnDef="nombre">
               <th mat-header-cell *matHeaderCellDef>Nombre</th>
-              <td mat-cell *matCellDef="let item">{{ item.nombre }}</td>
+              <td mat-cell *matCellDef="let item">
+                {{ item.nombre }}
+                @if (item.controla_vencimiento) {
+                  <mat-icon
+                    class="vencimiento-icon"
+                    matTooltip="Controla vencimiento"
+                    inline="true"
+                  >
+                    event_busy
+                  </mat-icon>
+                }
+              </td>
             </ng-container>
             <ng-container matColumnDef="categoria">
               <th mat-header-cell *matHeaderCellDef>Categoría</th>
@@ -172,6 +186,14 @@ import { Observable } from 'rxjs';
       .pres-chip {
         font-size: 13px;
       }
+      .vencimiento-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        vertical-align: text-bottom;
+        margin-left: 4px;
+        color: var(--mat-sys-error);
+      }
     `,
   ],
 })
@@ -179,7 +201,7 @@ export default class ProductosListComponent extends BaseListComponent<Producto> 
   override title = 'Productos';
   override entityName = 'productos';
   override formComponent = ProductoFormComponent;
-  override dialogWidth = '650px';
+  override dialogWidth = '750px';
   override columns = [
     'codigo',
     'nombre',
@@ -193,6 +215,20 @@ export default class ProductosListComponent extends BaseListComponent<Producto> 
   readonly searchTerm = signal('');
 
   private readonly productoService = inject(ProductoService);
+  private readonly router = inject(Router);
+
+  /**
+   * Productos usa una página completa (ruteada) para crear/editar en vez del
+   * modal que usa el resto de listados sobre BaseListComponent, porque el
+   * formulario (con sus 3 tabs) no entra cómodo en un dialog de ancho fijo.
+   */
+  override openCreate(): void {
+    this.router.navigate(['/productos/nuevo']);
+  }
+
+  override openEdit(item: Producto): void {
+    this.router.navigate(['/productos', this.getId(item), 'editar']);
+  }
 
   protected override buildParams(): { page: number; limit: number; search: string } {
     return { page: this.pageIndex() + 1, limit: this.pageSize(), search: this.searchTerm() };

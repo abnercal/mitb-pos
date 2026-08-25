@@ -58,14 +58,34 @@ export const routes: Routes = [
         loadComponent: () => import('./productos/list/productos-list.component'),
       },
       {
+        path: 'productos/nuevo',
+        canActivate: [featurePermisoGuard('productos')],
+        loadComponent: () => import('./productos/form/producto-form.component'),
+      },
+      {
+        path: 'productos/:id/editar',
+        canActivate: [featurePermisoGuard('productos')],
+        loadComponent: () => import('./productos/form/producto-form.component'),
+      },
+      {
         path: 'compras',
         canActivate: [featurePermisoGuard('compras')],
         loadComponent: () => import('./compras/list/compras-list.component'),
       },
       {
+        path: 'compras/nueva',
+        canActivate: [featurePermisoGuard('compras')],
+        loadComponent: () => import('./compras/form/compra-form.component'),
+      },
+      {
         path: 'ventas',
         canActivate: [featurePermisoGuard('ventas')],
         loadComponent: () => import('./ventas/list/ventas-list.component'),
+      },
+      {
+        path: 'ventas/nueva',
+        canActivate: [featurePermisoGuard('ventas')],
+        loadComponent: () => import('./ventas/nueva/venta-nueva.component'),
       },
       {
         path: 'sucursales',
@@ -96,6 +116,11 @@ export const routes: Routes = [
         path: 'reportes/inventario',
         canActivate: [featurePermisoGuard('inventario')],
         loadComponent: () => import('./reportes/inventario.component'),
+      },
+      {
+        path: 'lotes',
+        canActivate: [featurePermisoGuard('lotes')],
+        loadComponent: () => import('./lotes/list/lotes-list.component'),
       },
       {
         path: 'modulos',

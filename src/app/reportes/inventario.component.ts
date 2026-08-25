@@ -105,9 +105,9 @@ type FiltroEstado = 'todos' | 'bajo' | 'sin_stock' | 'normal';
                 <th mat-header-cell *matHeaderCellDef>Stock actual</th>
                 <td mat-cell *matCellDef="let item" class="cell-stock">
                   <span class="stock-num">{{ item.stock | number: '1.0-0' }}</span>
-                  <span class="stock-unit">{{ item.unidad || 'uds' }}</span>
-                  @if (item.presentaciones?.length) {
-                    <span class="stock-pres"> ({{ convertToPres(item) }}) </span>
+                  <span class="stock-unit">{{ stockUnitLabel(item) }}</span>
+                  @if (convertToPres(item); as pres) {
+                    <span class="stock-pres"> ({{ pres }}) </span>
                   }
                 </td>
               </ng-container>
@@ -116,7 +116,7 @@ type FiltroEstado = 'todos' | 'bajo' | 'sin_stock' | 'normal';
                 <th mat-header-cell *matHeaderCellDef>Stock mínimo</th>
                 <td mat-cell *matCellDef="let item" class="cell-stock">
                   <span class="stock-num">{{ item.stock_minimo | number: '1.0-0' }}</span>
-                  <span class="stock-unit">{{ item.unidad || 'uds' }}</span>
+                  <span class="stock-unit">{{ stockUnitLabel(item) }}</span>
                 </td>
               </ng-container>
               <!-- Estado -->
@@ -362,10 +362,38 @@ export default class InventarioComponent implements OnInit {
     }
   }
 
+  /**
+   * Presentación que representa la unidad base del producto (cantidad_base === 1,
+   * ej. "Botella" o "Unidad"). Es la misma unidad en la que Almacen.stock está
+   * expresado en el backend — ver controllers/reportes/inventario.js del API.
+   */
+  private presentacionBase(item: InventarioItem) {
+    return item.presentaciones?.find((p) => Number(p.cantidad_base) === 1) ?? null;
+  }
+
+  /** Presentación de empaque (la de mayor cantidad_base, ej. "Caja") para mostrar entre paréntesis */
+  private presentacionEmpaque(item: InventarioItem) {
+    if (!item.presentaciones?.length) return null;
+    return item.presentaciones.reduce((max, p) =>
+      Number(p.cantidad_base) > Number(max.cantidad_base) ? p : max,
+    );
+  }
+
+  /**
+   * Etiqueta de la unidad del número principal de stock. Se deriva de
+   * `presentaciones` (misma fuente que usa el backend para el cálculo),
+   * en vez de `item.unidad` — ese campo es un dato de catálogo libre por
+   * producto que puede quedar desalineado con la unidad real del stock.
+   */
+  stockUnitLabel(item: InventarioItem): string {
+    return this.presentacionBase(item)?.nombre || item.unidad || 'uds';
+  }
+
+  /** Conversión del stock (unidad base) a la presentación de empaque más grande */
   convertToPres(item: InventarioItem): string {
-    if (!item.presentaciones?.length || !item.stock) return '';
-    const p = item.presentaciones[0];
-    const cant = item.stock / p.cantidad_base;
-    return `${cant.toFixed(1)} ${p.nombre}${cant !== 1 ? 's' : ''}`;
+    const empaque = this.presentacionEmpaque(item);
+    if (!empaque || Number(empaque.cantidad_base) <= 1 || !item.stock) return '';
+    const cant = item.stock / Number(empaque.cantidad_base);
+    return `${cant.toFixed(1)} ${empaque.nombre}${cant !== 1 ? 's' : ''}`;
   }
 }
