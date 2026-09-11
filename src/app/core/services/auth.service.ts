@@ -5,6 +5,15 @@ import { environment } from '../../../environments/environment';
 import { Router } from '@angular/router';
 import { ModuloService } from './modulo.service';
 
+export interface SucursalSession {
+  idsucursal: number;
+  nombre: string;
+  direccion: string | null;
+  telefono: string | null;
+  estado: number;
+  es_principal: number | null;
+}
+
 export interface LoginResponse {
   ok: boolean;
   message: string;
@@ -19,6 +28,7 @@ export interface LoginResponse {
       imagen: string | null;
       imageUrl: string | null;
       idsucursal: number | null;
+      Sucursal?: SucursalSession | null;
       Roles?: { _id: number; nombrerol: string; Permisos?: { _id: number; nombre: string }[] }[];
     };
   };
@@ -33,6 +43,7 @@ export interface UserSession {
     email: string;
     username: string;
     idsucursal: number | null;
+    sucursal: SucursalSession | null;
     roles: string[];
     permisos: string[];
   };
@@ -69,6 +80,7 @@ export class AuthService {
                 email: res.data.usuario.email,
                 username: res.data.usuario.username,
                 idsucursal: res.data.usuario.idsucursal,
+                sucursal: res.data.usuario.Sucursal ?? null,
                 roles:
                   res.data.usuario.Roles?.map((r) => r.nombrerol) || [],
                 permisos,

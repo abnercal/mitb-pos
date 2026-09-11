@@ -103,20 +103,24 @@ type FiltroEstado = 'todos' | 'bajo' | 'sin_stock' | 'normal';
               <!-- Stock Actual -->
               <ng-container matColumnDef="stock">
                 <th mat-header-cell *matHeaderCellDef>Stock actual</th>
-                <td mat-cell *matCellDef="let item" class="cell-stock">
-                  <span class="stock-num">{{ item.stock | number: '1.0-0' }}</span>
-                  <span class="stock-unit">{{ stockUnitLabel(item) }}</span>
-                  @if (convertToPres(item); as pres) {
-                    <span class="stock-pres"> ({{ pres }}) </span>
-                  }
+                <td mat-cell *matCellDef="let item">
+                  <span class="cell-stock">
+                    <span class="stock-num">{{ item.stock | number: '1.0-0' }}</span>
+                    <span class="stock-unit">{{ stockUnitLabel(item) }}</span>
+                    @if (convertToPres(item); as pres) {
+                      <span class="stock-pres"> ({{ pres }}) </span>
+                    }
+                  </span>
                 </td>
               </ng-container>
               <!-- Stock Mínimo -->
               <ng-container matColumnDef="minimo">
                 <th mat-header-cell *matHeaderCellDef>Stock mínimo</th>
-                <td mat-cell *matCellDef="let item" class="cell-stock">
-                  <span class="stock-num">{{ item.stock_minimo | number: '1.0-0' }}</span>
-                  <span class="stock-unit">{{ stockUnitLabel(item) }}</span>
+                <td mat-cell *matCellDef="let item">
+                  <span class="cell-stock">
+                    <span class="stock-num">{{ item.stock_minimo | number: '1.0-0' }}</span>
+                    <span class="stock-unit">{{ stockUnitLabel(item) }}</span>
+                  </span>
                 </td>
               </ng-container>
               <!-- Estado -->
@@ -218,8 +222,10 @@ type FiltroEstado = 'todos' | 'bajo' | 'sin_stock' | 'normal';
         color: var(--mat-sys-on-surface-variant);
       }
 
+      /* inline-flex en un <span> interno: el <td> sigue siendo table-cell
+         y no se rompe el modelo de columnas de la tabla */
       .cell-stock {
-        display: flex;
+        display: inline-flex;
         align-items: baseline;
         gap: 4px;
       }
@@ -380,17 +386,28 @@ export default class InventarioComponent implements OnInit {
   }
 
   /**
-   * Etiqueta de la unidad del número principal de stock. Se deriva de
-   * `presentaciones` (misma fuente que usa el backend para el cálculo),
-   * en vez de `item.unidad` — ese campo es un dato de catálogo libre por
-   * producto que puede quedar desalineado con la unidad real del stock.
+   * Etiqueta de la unidad del número principal de stock. Prefiere `stock_base`
+   * (lo calcula el API); si no viene, cae al cálculo local desde `presentaciones`
+   * y por último a `item.unidad`.
    */
   stockUnitLabel(item: InventarioItem): string {
-    return this.presentacionBase(item)?.nombre || item.unidad || 'uds';
+    return item.stock_base || this.presentacionBase(item)?.nombre || item.unidad || 'uds';
   }
 
-  /** Conversión del stock (unidad base) a la presentación de empaque más grande */
+  /**
+   * Conversión del stock a presentaciones de empaque. Prefiere `stock_desglose`
+   * (lo calcula el API); si no viene, cae al cálculo local con la presentación
+   * de empaque más grande.
+   */
   convertToPres(item: InventarioItem): string {
+    if (item.stock_desglose?.length) {
+      const empaques = item.stock_desglose.filter((d) => Number(d.cantidad_base) > 1);
+      if (!empaques.length) return '';
+      return empaques
+        .map((d) => `${d.cantidad.toFixed(1)} ${d.presentacion}${d.cantidad !== 1 ? 's' : ''}`)
+        .join(', ');
+    }
+
     const empaque = this.presentacionEmpaque(item);
     if (!empaque || Number(empaque.cantidad_base) <= 1 || !item.stock) return '';
     const cant = item.stock / Number(empaque.cantidad_base);

@@ -3,7 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../interfaces/api-response.interface';
-import { Lote } from '../interfaces/lote.interface';
+import { Lote, LotePorVencer, ResumenPorVencer } from '../interfaces/lote.interface';
 
 @Injectable({ providedIn: 'root' })
 export class LoteService {
@@ -18,11 +18,15 @@ export class LoteService {
     return this.http.get<ApiResponse<Lote[]>>(this.apiUrl, { params: p }).pipe(map((r) => r.data));
   }
 
-  /** Lotes con `cantidad_disponible > 0` que vencen dentro de `dias` (default 30), ordenados soonest-first. */
-  getPorVencer(dias = 30): Observable<Lote[]> {
+  /**
+   * Lotes con `cantidad_disponible > 0` que vencen dentro de `dias` (default 30)
+   * más los ya vencidos con stock. Ordenados soonest-first. Devuelve la data
+   * aplanada y el `meta` con el conteo por urgencia.
+   */
+  getPorVencer(dias = 30): Observable<{ data: LotePorVencer[]; meta: ResumenPorVencer }> {
     const p = new HttpParams().set('dias', dias);
     return this.http
-      .get<ApiResponse<Lote[]>>(`${this.apiUrl}/por-vencer`, { params: p })
-      .pipe(map((r) => r.data));
+      .get<ApiResponse<LotePorVencer[], ResumenPorVencer>>(`${this.apiUrl}/por-vencer`, { params: p })
+      .pipe(map((r) => ({ data: r.data, meta: r.meta })));
   }
 }
